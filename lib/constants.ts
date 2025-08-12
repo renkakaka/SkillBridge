@@ -240,49 +240,49 @@ export const MOCK_SUCCESS_STORIES: SuccessStory[] = [
 export const MOCK_PRICING_PLANS: PricingPlan[] = [
   {
     id: "starter",
-    name: "Starter",
+    name: "Սկսնակ",
     price: 0,
     interval: "monthly",
     features: [
-      "Access to Bronze projects",
-      "Basic mentor matching",
-      "Community access",
-      "Portfolio builder",
-      "Email support"
+      "Մուտք դեպի Bronze նախագծեր",
+      "Հիմնական մենթորի համապատասխանություն",
+      "Համայնքի մուտք",
+      "Պորտֆոլիո ստեղծող",
+      "Email աջակցություն"
     ],
-    cta: "Get Started Free"
+    cta: "Սկսել անվճար"
   },
   {
     id: "accelerator",
-    name: "Accelerator",
+    name: "Արագացուցիչ",
     price: 49,
     interval: "monthly",
     features: [
-      "All Starter features",
-      "Silver projects access",
-      "Priority mentor matching",
-      "2 mentor sessions/month included",
-      "Advanced analytics",
-      "Priority support"
+      "Բոլոր հնարավորությունները Սկսնակ պլանից",
+      "Մուտք դեպի Silver նախագծեր",
+      "Նախապատվության մենթորի համապատասխանություն",
+      "Ներառված է 2 մենթորի սեսիա/ամիս",
+      "Ընդլայնված վերլուծություն",
+      "Նախապատվության աջակցություն"
     ],
     popular: true,
-    cta: "Start Free Trial"
+    cta: "Սկսել փորձնականը"
   },
   {
     id: "professional",
-    name: "Professional",
+    name: "Մասնագիտական",
     price: 149,
     interval: "monthly",
     features: [
-      "All Accelerator features",
-      "Gold projects access",
-      "Unlimited mentor sessions",
-      "Personal career coach",
-      "Job guarantee (6 months)",
-      "Priority support",
-      "Resume review service"
+      "Բոլոր հնարավորությունները Արագացուցիչ պլանից",
+      "Մուտք դեպի Gold նախագծեր",
+      "Անսահմանափակ մենթորի սեսիաներ",
+      "Անձնական կարիերայի խորհրդատու",
+      "Աշխատանքի երաշխիք (6 ամիս)",
+      "Նախապատվության աջակցություն",
+      "Ռեզյումեի գնահատում"
     ],
-    cta: "Start Free Trial"
+    cta: "Սկսել փորձնականը"
   }
 ];
 

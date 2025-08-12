@@ -166,9 +166,9 @@ export default function PricingPage() {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-4 px-6 font-semibold text-gray-900">Հատկություն</th>
-                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Starter</th>
-                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Accelerator</th>
-                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Professional</th>
+                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Սկսնակ</th>
+                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Արագացուցիչ</th>
+                    <th className="text-center py-4 px-6 font-semibold text-gray-900">Մասնագիտական</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

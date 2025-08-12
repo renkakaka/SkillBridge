@@ -30,16 +30,8 @@ export default function ProjectsPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
-  const filteredProjects = [] // Until admin adds items in DB, show empty
-    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.category.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesCategory = !selectedCategory || project.category === selectedCategory
-    const matchesDifficulty = !selectedDifficulty || project.difficulty === selectedDifficulty
-    
-    return matchesSearch && matchesCategory && matchesDifficulty
-  })
+  // Until admin adds items in DB, show empty list (no filtering yet)
+  const filteredProjects: any[] = []
 
   const allCategories = Array.from(new Set(MOCK_PROJECTS.map(project => project.category)))
   const allDifficulties = ['Beginner', 'Intermediate', 'Advanced']

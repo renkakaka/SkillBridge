@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-})
+// During static build, avoid initializing Stripe if key is missing to prevent build-time errors
+const stripeKey = process.env.STRIPE_SECRET_KEY
+const stripe = stripeKey
+  ? new Stripe(stripeKey, { apiVersion: '2023-10-16' })
+  : null as unknown as Stripe
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +16,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Создаем платежное намерение
+    if (!stripeKey || !stripe) {
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 })
+    }
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe использует центы
       currency,
@@ -43,6 +48,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing paymentIntentId parameter' }, { status: 400 })
     }
 
+    if (!stripeKey || !stripe) {
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 })
+    }
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
     return NextResponse.json(paymentIntent)
   } catch (e: unknown) {
