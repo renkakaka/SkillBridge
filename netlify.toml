@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  PRISMA_GENERATE_DATAPROXY = "true"
 
 [[redirects]]
   from = "/*"
