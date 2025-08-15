@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
+  // Netlify specific settings
+  output: 'standalone',
+  // Image optimization
+  images: {
+    unoptimized: true,
+  },
+  // Trailing slash for better compatibility
+  trailingSlash: false,
 };
 
 export default nextConfig;
