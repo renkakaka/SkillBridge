@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { setSessionCookie } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
+import { loginSchema } from '@/lib/validations'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json()
+    const rl = await rateLimit(req.headers, { id: 'auth:signin', limit: 10, windowMs: 60_000 })
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+    const body = await req.json()
+    const parsed = loginSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 400 })
+    }
+    const { email, password } = parsed.data
     
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
@@ -34,8 +46,16 @@ export async function POST(req: NextRequest) {
       }, { status: 403 })
     }
 
+    // Устанавливаем защищенную сессию в cookie
+    setSessionCookie({
+      userId: user.id,
+      email: user.email,
+      userType: user.userType as any,
+      emailVerified: Boolean(user.emailVerified),
+    })
+
     // Убираем пароль из ответа
-    const { password: _, ...userWithoutPassword } = user
+    const { password: _, verificationToken: __, verificationTokenExpires: ___, ...userWithoutPassword } = user as any
 
     return NextResponse.json({
       user: userWithoutPassword,

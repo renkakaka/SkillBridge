@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
 
 // GET /api/achievements - Получить достижения пользователя
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
 
     // Получаем все достижения пользователя
     const userAchievements = await prisma.userAchievement.findMany({
@@ -69,8 +67,11 @@ export async function GET(request: NextRequest) {
 // POST /api/achievements - Разблокировать достижение
 export async function POST(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const { userId, achievementId } = body
+    const { achievementId } = body
+    const userId = session.userId
 
     if (!userId || !achievementId) {
       return NextResponse.json({ 
@@ -150,8 +151,11 @@ export async function POST(request: NextRequest) {
 // PUT /api/achievements - Обновить прогресс достижения
 export async function PUT(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const { userId, achievementId, progress } = body
+    const { achievementId, progress } = body
+    const userId = session.userId
 
     if (!userId || !achievementId || progress === undefined) {
       return NextResponse.json({ 
@@ -232,15 +236,17 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/achievements - Сбросить достижение
 export async function DELETE(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const achievementId = searchParams.get('achievementId')
 
-    if (!userId || !achievementId) {
+    if (!achievementId) {
       return NextResponse.json({ 
-        error: 'User ID and Achievement ID are required' 
+        error: 'Achievement ID is required' 
       }, { status: 400 })
     }
+    const userId = session.userId
 
     // Удаляем достижение пользователя
     await prisma.userAchievement.delete({

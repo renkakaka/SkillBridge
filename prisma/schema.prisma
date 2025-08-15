@@ -322,3 +322,14 @@ model Level {
   createdAt      DateTime @default(now())
 }
 
+// Newsletter subscriptions
+model NewsletterSubscription {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  consent      Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  isActive     Boolean  @default(true)
+  unsubscribedAt DateTime?
+  updatedAt    DateTime @updatedAt
+}
+

@@ -56,6 +56,8 @@ export default function EarningsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [loading, setLoading] = useState(true)
   const [activeChart, setActiveChart] = useState<'earnings' | 'category' | 'monthly'>('earnings')
+  const [chartData, setChartData] = useState<{ monthly: { labels: string[]; data: number[] }; category: { labels: string[]; data: number[] } }>({ monthly: { labels: [], data: [] }, category: { labels: [], data: [] } })
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   
   const earningsChartRef = useRef<HTMLCanvasElement>(null)
   const categoryChartRef = useRef<HTMLCanvasElement>(null)
@@ -63,8 +65,41 @@ export default function EarningsPage() {
   const chartInstances = useRef<{ [key: string]: any }>({})
 
   useEffect(() => {
-    loadEarningsData()
-  }, [])
+    const load = async () => {
+      try {
+        const meRes = await fetch('/api/users/me')
+        if (!meRes.ok) return setLoading(false)
+        const me = await meRes.json()
+        const r = await fetch(`/api/earnings?period=${selectedPeriod}`)
+        if (!r.ok) return setLoading(false)
+        const data = await r.json()
+        // Map stats
+        setStats({
+          totalEarnings: data.stats?.totalEarnings || 0,
+          monthlyEarnings: data.stats?.monthlyEarnings || 0,
+          pendingAmount: data.stats?.pendingAmount || 0,
+          availableBalance: data.stats?.availableBalance || 0,
+          growthRate: data.stats?.growthRate || 0,
+          projectCount: data.stats?.projectCount || 0,
+        })
+        // Map transactions (fallback to mock if missing)
+        const tx = Array.isArray(data.transactions) ? data.transactions.map((t: any) => ({
+          id: t.id, project: t.project?.title || '-', client: t.project?.client?.name || '-', amount: t.amount,
+          type: t.type, status: t.status, date: new Date(t.createdAt).toISOString().slice(0,10), description: t.description
+        })) : []
+        setTransactions(tx)
+        // Prepare charts
+        setChartData({
+          monthly: data.charts?.monthly || { labels: [], data: [] },
+          category: data.charts?.category || { labels: [], data: [] }
+        })
+        setLoading(false)
+      } catch {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [selectedPeriod])
 
   useEffect(() => {
     if (!loading && Chart) {
@@ -351,35 +386,11 @@ export default function EarningsPage() {
     }
   }
 
-  const getEarningsData = () => {
-    // Данные для графика доходов по месяцам
-    const months = ['Հունվար', 'Փետրվար', 'Մարտ', 'Ապրիլ', 'Մայիս', 'Հունիս', 'Հուլիս', 'Օգոստոս', 'Սեպտեմբեր', 'Հոկտեմբեր', 'Նոյեմբեր', 'Դեկտեմբեր']
-    const earnings = [3200, 2800, 3500, 4200, 3800, 4500, 5100, 4800, 5200, 4900, 5500, 6000]
-    
-    return {
-      labels: months.slice(0, new Date().getMonth() + 1),
-      data: earnings.slice(0, new Date().getMonth() + 1)
-    }
-  }
+  const getEarningsData = () => chartData.monthly
 
-  const getCategoryData = () => {
-    // Данные для графика по категориям
-    return {
-      labels: ['Վեբ Զարգացում', 'Մոբայլ Զարգացում', 'Դիզայն', 'Մարքեթինգ', 'Կոնսուլտացիա'],
-      data: [3200, 1800, 800, 600, 1400]
-    }
-  }
+  const getCategoryData = () => chartData.category
 
-  const getMonthlyData = () => {
-    // Данные для столбчатого графика по месяцам
-    const months = ['Հունվ', 'Փետ', 'Մար', 'Ապր', 'Մայ', 'Հուն', 'Հուլ', 'Օգս', 'Սեպ', 'Հոկ', 'Նոյ', 'Դեկ']
-    const earnings = [3200, 2800, 3500, 4200, 3800, 4500, 5100, 4800, 5200, 4900, 5500, 6000]
-    
-    return {
-      labels: months.slice(0, new Date().getMonth() + 1),
-      data: earnings.slice(0, new Date().getMonth() + 1)
-    }
-  }
+  const getMonthlyData = () => chartData.monthly
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -409,12 +420,14 @@ export default function EarningsPage() {
 
   const handleWithdraw = () => {
     if (stats.availableBalance > 0) {
-      alert(`Հանել ${stats.availableBalance}$ ձեր հաշվից`)
+      setToast({ message: `Հանում ենք $${stats.availableBalance.toLocaleString()} ձեր հաշվից`, type: 'success' })
+      setTimeout(() => setToast(null), 2500)
     }
   }
 
   const handleExport = () => {
-    alert('Ներբեռնվում է եկամուտների հաշվետվությունը...')
+    setToast({ message: 'Ներբեռնվում է եկամուտների հաշվետվությունը...', type: 'success' })
+    setTimeout(() => setToast(null), 2500)
   }
 
   if (loading) {
@@ -686,6 +699,12 @@ export default function EarningsPage() {
           </Card>
         )}
       </div>
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

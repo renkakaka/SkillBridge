@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,9 +29,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { reviewerId, reviewedId, rating, comment } = await req.json()
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const rl = await rateLimit(req.headers, { id: 'reviews:create', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
+    const { reviewedId, rating, comment } = await req.json()
     
-    if (!reviewerId || !reviewedId || !rating) {
+    if (!reviewedId || !rating) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -39,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     // Проверяем, существует ли рецензент
     const reviewer = await prisma.user.findUnique({
-      where: { id: reviewerId }
+      where: { id: session.userId }
     })
 
     if (!reviewer) {
@@ -57,10 +64,7 @@ export async function POST(req: NextRequest) {
 
     // Проверяем, не оставлял ли уже рецензент отзыв этому пользователю
     const existingReview = await prisma.review.findFirst({
-      where: {
-        reviewerId,
-        reviewedId
-      }
+      where: { reviewerId: session.userId, reviewedId }
     })
 
     if (existingReview) {
@@ -69,12 +73,7 @@ export async function POST(req: NextRequest) {
 
     // Создаем отзыв
     const review = await prisma.review.create({
-      data: {
-        reviewerId,
-        reviewedId,
-        rating,
-        comment
-      },
+      data: { reviewerId: session.userId, reviewedId, rating, comment },
       include: { reviewer: true, reviewed: true }
     })
 

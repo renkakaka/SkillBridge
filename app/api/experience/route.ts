@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,20 +9,25 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId')
     const experienceLevel = searchParams.get('experienceLevel')
 
-    if (userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { experienceLevel: true, skills: true }
-      })
-      return NextResponse.json(user)
-    }
-
     if (experienceLevel) {
       const users = await prisma.user.findMany({
         where: { experienceLevel },
         select: { id: true, fullName: true, experienceLevel: true, skills: true }
       })
       return NextResponse.json(users)
+    }
+
+    if (userId) {
+      const session = getSessionFromRequest(req)
+      if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      if (session.userType !== 'admin' && session.userId !== userId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { experienceLevel: true, skills: true }
+      })
+      return NextResponse.json(user)
     }
 
     return NextResponse.json({ error: 'Missing userId or experienceLevel parameter' }, { status: 400 })
@@ -32,15 +39,20 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const { userId, experienceLevel, skills } = await req.json()
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const rl = await rateLimit(req.headers, { id: 'experience:update', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
+    const { experienceLevel, skills } = await req.json()
     
-    if (!userId || !experienceLevel) {
+    if (!experienceLevel) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Проверяем, существует ли пользователь
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: session.userId }
     })
 
     if (!user) {
@@ -52,7 +64,7 @@ export async function PUT(req: NextRequest) {
 
     // Обновляем опыт пользователя
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: session.userId },
       data: {
         experienceLevel,
         skills: skillsString

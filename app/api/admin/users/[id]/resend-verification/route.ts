@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import crypto from 'crypto'
 import { Resend } from 'resend'
+import { getSessionFromRequest } from '@/lib/auth'
 
-function isAdmin(req: NextRequest) {
-  const headerEmail = req.headers.get('x-admin-email') || ''
-  const adminEmail = process.env.ADMIN_EMAIL || ''
-  return adminEmail && headerEmail.toLowerCase() === adminEmail.toLowerCase()
+function assertAdmin(req: NextRequest) {
+  const session = getSessionFromRequest(req)
+  return !!session && session.userType === 'admin'
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAdmin(req)) return NextResponse.json({ error: 'Մուտքը արգելված է' }, { status: 403 })
+  if (!assertAdmin(req)) return NextResponse.json({ error: 'Մուտքը արգելված է' }, { status: 403 })
   const id = params.id
   const user = await prisma.user.findUnique({ where: { id } })
   if (!user) return NextResponse.json({ error: 'Չգտնվեց' }, { status: 404 })
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const resend = new Resend(resendKey)
     const verifyLink = `${appUrl}/auth/verify-email?email=${encodeURIComponent(user.email)}&token=${verificationToken}`
     await resend.emails.send({
-      from: 'SkillBridge <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM || 'SkillBridge <onboarding@resend.dev>',
       to: user.email,
       subject: 'Հաստատեք ձեր email-ը',
       html: `<p>Սեղմեք հղումը՝ հաստատելու համար: <a href="${verifyLink}">Հաստատել email-ը</a></p><p>Կոդը: ${verificationToken}</p>`

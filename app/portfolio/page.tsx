@@ -83,7 +83,42 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadPortfolioData()
+    const load = async () => {
+      try {
+        const meRes = await fetch('/api/users/me')
+        if (!meRes.ok) return setLoading(false)
+        const me = await meRes.json()
+        const r = await fetch(`/api/portfolio`)
+        if (!r.ok) return setLoading(false)
+        const data = await r.json()
+        const mappedProjects: Project[] = (data.projects || []).map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          image: '',
+          category: p.category,
+          skills: (() => { try { return JSON.parse(p.skills || '[]') } catch { return [] } })(),
+          budget: p.budget || 0,
+          duration: p.duration || '',
+          rating: p.rating || 0,
+          reviews: p.reviews || 0,
+          views: p.views || 0,
+          likes: p.likes || 0,
+          status: (p.status as any) || 'completed',
+          client: p.client || '',
+          completionDate: p.completionDate ? new Date(p.completionDate) : undefined,
+          tags: (() => { try { return JSON.parse(p.tags || '[]') } catch { return [] } })(),
+        }))
+        const mappedSkills: Skill[] = (data.skills || []).map((s: any) => ({ name: s.name, level: s.level, experience: s.experience, projects: s.projects, category: s.category }))
+        setProjects(mappedProjects)
+        setSkills(mappedSkills)
+        setStats(data.stats || stats)
+        setLoading(false)
+      } catch {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
   useEffect(() => {
@@ -369,7 +404,7 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Ընդհանուր եկամուտ</p>
-                  <p className="text-2xl font-bold text-neutral-900">${stats.totalEarnings.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-neutral-900">${Number(stats.totalEarnings || 0).toLocaleString()}</p>
                   <p className="text-sm text-neutral-500">Բոլոր նախագծերից</p>
                 </div>
                 <div className="p-3 bg-green-100 rounded-lg">
@@ -384,7 +419,7 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Միջին գնահատական</p>
-                  <p className="text-2xl font-bold text-neutral-900">{stats.averageRating.toFixed(1)}</p>
+                  <p className="text-2xl font-bold text-neutral-900">{Number(stats.averageRating || 0).toFixed(1)}</p>
                   <div className="flex items-center gap-1 text-sm text-yellow-600">
                     <Star className="h-4 w-4 fill-current" />
                     <span>5-ից</span>
@@ -402,8 +437,8 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Ընդհանուր դիտումներ</p>
-                  <p className="text-2xl font-bold text-neutral-900">{stats.totalViews.toLocaleString()}</p>
-                  <p className="text-sm text-neutral-500">{stats.totalLikes} հավանություն</p>
+                  <p className="text-2xl font-bold text-neutral-900">{Number(stats.totalViews || 0).toLocaleString()}</p>
+                  <p className="text-sm text-neutral-500">{Number(stats.totalLikes || 0).toLocaleString()} հավանություն</p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-lg">
                   <Eye className="h-6 w-6 text-purple-600" />
@@ -467,8 +502,8 @@ export default function PortfolioPage() {
             <Card key={project.id} className="group hover:shadow-lg transition-all duration-200">
               <div className="relative">
                 <div className="aspect-video bg-neutral-200 rounded-t-lg overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                    <span className="text-neutral-600 font-medium">{project.title}</span>
+                  <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+                    <span className="text-neutral-700 font-medium line-clamp-2 px-4 text-center">{project.title}</span>
                   </div>
                 </div>
                 <div className="absolute top-2 right-2">

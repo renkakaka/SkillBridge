@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { getSessionFromRequest } from '@/lib/auth'
 
 // During static build, avoid initializing Stripe if key is missing to prevent build-time errors
 const stripeKey = process.env.STRIPE_SECRET_KEY
@@ -9,6 +10,8 @@ const stripe = stripeKey
 
 export async function POST(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { amount, currency = 'usd', description, customerEmail } = await req.json()
     
     if (!amount || !description) {
@@ -24,6 +27,7 @@ export async function POST(req: NextRequest) {
       currency,
       description,
       customer_email: customerEmail,
+      metadata: { userId: session.userId },
       automatic_payment_methods: {
         enabled: true,
       },

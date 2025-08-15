@@ -50,127 +50,43 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     loadNotifications()
-  }, [])
+  }, [filter])
 
-  const loadNotifications = () => {
-    // Симулируем загрузку уведомлений
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'project',
-        title: 'Նոր նախագիծ ստացվել է',
-        message: 'Ձեզ առաջարկվել է նոր նախագիծ "Էլեկտրոնային առևտրի կայք"',
-        timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        isRead: false,
-        isImportant: true,
-        sender: {
-          name: 'TechCorp',
-          avatar: '/api/avatar?seed=techcorp'
-        },
-        actionUrl: '/projects/1',
-        metadata: {
-          projectName: 'Էլեկտրոնային առևտրի կայք'
-        }
-      },
-      {
-        id: '2',
-        type: 'payment',
-        title: 'Վճարում ստացվել է',
-        message: 'Ձեր հաշվին մուտքագրվել է $2,500 նախագծի համար',
-        timestamp: new Date(Date.now() - 1000 * 60 * 15),
-        isRead: false,
-        isImportant: false,
-        metadata: {
-          amount: 2500,
-          projectName: 'Մոբայլ հավելված iOS-ի համար'
-        }
-      },
-      {
-        id: '3',
-        type: 'achievement',
-        title: 'Նոր հաջողություն բացահայտվել է',
-        message: 'Դուք բացահայտել եք "Առաջին նախագիծ" հաջողությունը',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        isRead: true,
-        isImportant: false,
-        metadata: {
-          achievementName: 'Առաջին նախագիծ'
-        }
-      },
-      {
-        id: '4',
-        type: 'message',
-        title: 'Նոր հաղորդագրություն',
-        message: 'Արամ Սարգսյանը ուղարկել է հաղորդագրություն',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60),
-        isRead: false,
-        isImportant: false,
-        sender: {
-          name: 'Արամ Սարգսյան',
-          avatar: '/api/avatar?seed=aram'
-        },
-        actionUrl: '/messages'
-      },
-      {
-        id: '5',
-        type: 'reminder',
-        title: 'Հիշեցում նախագծի մասին',
-        message: 'Նախագիծ "Լոգո և բրենդինգ" պետք է ավարտվի վաղը',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        isRead: true,
-        isImportant: true,
-        metadata: {
-          projectName: 'Լոգո և բրենդինգ'
-        }
-      },
-      {
-        id: '6',
-        type: 'system',
-        title: 'Համակարգի թարմացում',
-        message: 'Համակարգը թարմացվել է նոր տարբերակի',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        isRead: true,
-        isImportant: false
-      },
-      {
-        id: '7',
-        type: 'payment',
-        title: 'Վճարում ստացվել է',
-        message: 'Ձեր հաշվին մուտքագրվել է $800 նախագծի համար',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-        isRead: true,
-        isImportant: false,
-        metadata: {
-          amount: 800,
-          projectName: 'Լոգո և բրենդինգ'
-        }
-      },
-      {
-        id: '8',
-        type: 'achievement',
-        title: 'Նոր մակարդակ հասել եք',
-        message: 'Դուք հասել եք "Փորձառու" մակարդակին',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-        isRead: true,
-        isImportant: false,
-        metadata: {
-          achievementName: 'Փորձառու'
-        }
-      }
-    ]
-
-    setNotifications(mockNotifications)
-    setLoading(false)
+  const loadNotifications = async () => {
+    try {
+      const r = await fetch(`/api/notifications?filter=${filter}`)
+      if (!r.ok) { setLoading(false); return }
+      const data = await r.json()
+      const list = Array.isArray(data.notifications) ? data.notifications.map((n: any) => ({
+        id: n.id, type: n.type, title: n.title, message: n.message, timestamp: new Date(n.createdAt), isRead: n.isRead, isImportant: n.isImportant,
+        sender: n.sender ? { name: n.sender.fullName || n.sender.name || 'User', avatar: n.sender.avatarUrl || n.sender.avatar || '' } : undefined,
+        actionUrl: undefined, metadata: (() => { try { return JSON.parse(n.metadata || '{}') } catch { return {} } })()
+      })) : []
+      setNotifications(list)
+      setLoading(false)
+    } catch {
+      setLoading(false)
+    }
   }
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(notif => 
-      notif.id === id ? { ...notif, isRead: true } : notif
-    ))
+  const markAsRead = async (id: string) => {
+    try {
+      const email = localStorage.getItem('userEmail') || ''
+      const meRes = await fetch('/api/users/me', { headers: { 'x-user-email': email } })
+      const me = await meRes.json()
+      await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'markAsRead', userId: me.id, notificationIds: [id] }) })
+      setNotifications(prev => prev.map(notif => notif.id === id ? { ...notif, isRead: true } : notif))
+    } catch {}
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })))
+  const markAllAsRead = async () => {
+    try {
+      const email = localStorage.getItem('userEmail') || ''
+      const meRes = await fetch('/api/users/me', { headers: { 'x-user-email': email } })
+      const me = await meRes.json()
+      await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'markAsRead', userId: me.id }) })
+      setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })))
+    } catch {}
   }
 
   const deleteNotification = (id: string) => {

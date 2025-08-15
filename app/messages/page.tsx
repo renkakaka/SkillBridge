@@ -59,182 +59,78 @@ export default function MessagesPage() {
     }
   }, [selectedConversation])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  // Убираем автоскролл вниз при новых сообщениях
+  // useEffect(() => {
+  //   scrollToBottom()
+  // }, [messages])
 
-  const loadConversations = () => {
-    // Симулируем загрузку разговоров
-    const mockConversations: Conversation[] = [
-      {
-        id: '1',
-        participant: {
-          id: 'user1',
-          name: 'Արամ Սարգսյան',
-          avatar: '/api/avatar?seed=aram',
-          isOnline: true,
-          lastSeen: new Date()
-        },
-        lastMessage: {
-          content: 'Բարև! Ինչպե՞ս է գնում նախագիծը',
-          timestamp: new Date(Date.now() - 1000 * 60 * 5),
-          isRead: false
-        },
-        unreadCount: 2,
-        isActive: false
-      },
-      {
-        id: '2',
-        participant: {
-          id: 'user2',
-          name: 'Մարիա Հովհաննիսյան',
-          avatar: '/api/avatar?seed=maria',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 1000 * 60 * 30)
-        },
-        lastMessage: {
-          content: 'Շնորհակալություն աշխատանքի համար',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          isRead: true
-        },
-        unreadCount: 0,
-        isActive: false
-      },
-      {
-        id: '3',
-        participant: {
-          id: 'user3',
-          name: 'Դավիթ Մարտիրոսյան',
-          avatar: '/api/avatar?seed=david',
-          isOnline: true,
-          lastSeen: new Date()
-        },
-        lastMessage: {
-          content: 'Կարո՞ղ եք օգնել այս հարցում',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-          isRead: true
-        },
-        unreadCount: 0,
-        isActive: false
-      },
-      {
-        id: '4',
-        participant: {
-          id: 'user4',
-          name: 'Անի Ավետիսյան',
-          avatar: '/api/avatar?seed=ani',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 1000 * 60 * 60 * 3)
-        },
-        lastMessage: {
-          content: 'Երբ կարող եք սկսել',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-          isRead: true
-        },
-        unreadCount: 0,
-        isActive: false
-      }
-    ]
-
-    setConversations(mockConversations)
-    setLoading(false)
-  }
-
-  const loadMessages = (conversationId: string) => {
-    // Симулируем загрузку сообщений
-    const mockMessages: Message[] = [
-      {
-        id: '1',
-        content: 'Բարև! Ինչպե՞ս է գնում նախագիծը',
-        sender: {
-          id: 'user1',
-          name: 'Արամ Սարգսյան',
-          avatar: '/api/avatar?seed=aram',
-          isOnline: true
-        },
-        timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        isRead: true,
-        type: 'text'
-      },
-      {
-        id: '2',
-        content: 'Բարև! Ամեն ինչ լավ է, շնորհակալություն հարցման համար',
-        sender: {
-          id: 'me',
-          name: 'Դուք',
-          avatar: '/api/avatar?seed=me',
-          isOnline: true
-        },
-        timestamp: new Date(Date.now() - 1000 * 60 * 3),
-        isRead: true,
-        type: 'text'
-      },
-      {
-        id: '3',
-        content: 'Երբ կարող եք ավարտել առաջին փուլը',
-        sender: {
-          id: 'user1',
-          name: 'Արամ Սարգսյան',
-          avatar: '/api/avatar?seed=aram',
-          isOnline: true
-        },
-        timestamp: new Date(Date.now() - 1000 * 60 * 1),
-        isRead: false,
-        type: 'text'
-      }
-    ]
-
-    setMessages(mockMessages)
-    
-    // Обновляем активный разговор
-    setConversations(prev => prev.map(conv => ({
-      ...conv,
-      isActive: conv.id === conversationId
-    })))
-  }
-
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return
-
-    const message: Message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender: {
-        id: 'me',
-        name: 'Դուք',
-        avatar: '/api/avatar?seed=me',
-        isOnline: true
-      },
-      timestamp: new Date(),
-      isRead: false,
-      type: 'text'
+  const loadConversations = async () => {
+    try {
+      const meRes = await fetch('/api/users/me')
+      if (!meRes.ok) return setLoading(false)
+      const me = await meRes.json()
+      const r = await fetch(`/api/messages`)
+      if (!r.ok) return setLoading(false)
+      const data = await r.json()
+      const convs = Array.isArray(data.conversations) ? data.conversations.map((c: any) => ({
+        ...c,
+        lastMessage: c.lastMessage ? { ...c.lastMessage, timestamp: new Date(c.lastMessage.timestamp) } : c.lastMessage
+      })) : []
+      setConversations(convs)
+      setLoading(false)
+    } catch {
+      setLoading(false)
     }
+  }
 
-    setMessages(prev => [...prev, message])
+  const loadMessages = async (conversationId: string) => {
+    try {
+      const meRes = await fetch('/api/users/me')
+      const me = await meRes.json()
+      const r = await fetch(`/api/messages?conversationId=${encodeURIComponent(conversationId)}`)
+      const data = await r.json()
+      const mapped: Message[] = (data.messages || []).map((m: any) => ({
+        id: m.id,
+        content: m.content,
+        sender: { id: m.sender.id, name: m.sender.name, avatar: m.sender.avatar || '', isOnline: false },
+        timestamp: new Date(m.createdAt),
+        isRead: m.isRead,
+        type: (m.type as 'text' | 'image' | 'file') || 'text'
+      }))
+      setMessages(mapped)
+      setConversations(prev => prev.map(conv => ({ ...conv, isActive: conv.id === conversationId })))
+      // Автоматически помечаем сообщения как прочитанные при открытии диалога
+      try {
+        await fetch('/api/messages', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) })
+        setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+        window.dispatchEvent(new Event('sb-refresh-counts'))
+      } catch {}
+    } catch {}
+  }
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return
+    try {
+      const meRes = await fetch('/api/users/me')
+      const me = await meRes.json()
+      const body = { type: 'message', data: { conversationId: selectedConversation.id, recipientId: selectedConversation.participant.id, content: newMessage } }
+      const r = await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (r.ok) {
+        const jr = await r.json()
+        setMessages(prev => [...prev, { id: jr.message.id, content: newMessage, sender: { id: me.id, name: 'Դուք', avatar: '', isOnline: true }, timestamp: new Date(), isRead: false, type: 'text' }])
     setNewMessage('')
-
-    // Обновляем последнее сообщение в разговоре
-    setConversations(prev => prev.map(conv => 
-      conv.id === selectedConversation.id 
-        ? {
-            ...conv,
-            lastMessage: {
-              content: newMessage,
-              timestamp: new Date(),
-              isRead: false
-            }
-          }
-        : conv
-    ))
+        setConversations(prev => prev.map(conv => conv.id === selectedConversation.id ? { ...conv, lastMessage: { content: newMessage, timestamp: new Date(), isRead: false } } : conv))
+      }
+    } catch {}
   }
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const scrollToBottom = () => {}
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: any) => {
+    if (!date) return ''
+    const d = date instanceof Date ? date : new Date(date)
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
+    const diff = now.getTime() - d.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -243,7 +139,7 @@ export default function MessagesPage() {
     if (minutes < 60) return `${minutes} ր`
     if (hours < 24) return `${hours} ժ`
     if (days < 7) return `${days} օր`
-    return date.toLocaleDateString('hy-AM')
+    return d.toLocaleDateString('hy-AM')
   }
 
   const filteredConversations = conversations.filter(conv =>
@@ -296,7 +192,7 @@ export default function MessagesPage() {
                     onClick={() => setSelectedConversation(conversation)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative">
+                      <div className="relative" key={`avatar-${conversation.id}`}>
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={conversation.participant.avatar} />
                           <AvatarFallback>
@@ -363,13 +259,19 @@ export default function MessagesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Video className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            // пометить все сообщения в текущем чате как прочитанные
+                            try {
+                              await fetch('/api/messages', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId: selectedConversation.id }) })
+                              // локально сбрасываем счётчик и обновим бейджи в навбаре
+                              setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
+                              window.dispatchEvent(new Event('sb-refresh-counts'))
+                            } catch {}
+                          }}
+                        >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </div>
@@ -382,7 +284,7 @@ export default function MessagesPage() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                       {messages.map((message) => (
                         <div
-                          key={message.id}
+                          key={`${message.id}-${message.timestamp?.toString?.() || ''}`}
                           className={`flex ${message.sender.id === 'me' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div className={`max-w-[70%] ${message.sender.id === 'me' ? 'order-2' : 'order-1'}`}>

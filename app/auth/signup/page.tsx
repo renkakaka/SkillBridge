@@ -72,15 +72,16 @@ export default function SignUpPage() {
 
         if (response.ok) {
           const user = await response.json()
-          console.log('User registered successfully:', user)
-          
-          // Показываем сообщение о необходимости подтверждения email
-          setMessage('Գրանցումը հաջողությամբ ավարտվել է! Խնդրում ենք ստուգել ձեր email հասցեն և հաստատել հաշիվը:')
-          
-          // Перенаправляем на страницу подтверждения email
+          // trigger email verification send
+          await fetch('/api/auth/verify-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email })
+          })
+          setMessage('Գրանցումը հաջողությամբ ավարտվել է! Ստուգեք ձեր email-ը հաստատման համար:')
           setTimeout(() => {
             window.location.href = `/auth/verify-email?email=${encodeURIComponent(formData.email)}`
-          }, 2000)
+          }, 1200)
         } else {
           const errorData = await response.json()
           throw new Error(errorData.error || 'Registration failed')

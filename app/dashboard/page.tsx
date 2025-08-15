@@ -44,6 +44,75 @@ export default function DashboardPage() {
     nextMilestone: 'Complete your first project'
   })
 
+  function SkillsEditor({ userEmail, onSaved }: { userEmail?: string; onSaved: (skills: string[]) => void }) {
+    const [open, setOpen] = useState(false)
+    const categories: Record<string, string[]> = {
+      frontend: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Vue', 'Svelte'],
+      backend: ['Node.js', 'Express', 'NestJS', 'PostgreSQL', 'MongoDB', 'Prisma'],
+      mobile: ['React Native', 'Swift', 'Kotlin', 'Flutter'],
+      design: ['Figma', 'Adobe XD', 'Illustrator', 'UI/UX'],
+      other: ['Python', 'Docker', 'Git', 'CI/CD']
+    }
+    const [selectedCategory, setSelectedCategory] = useState<keyof typeof categories>('frontend')
+    const [selected, setSelected] = useState<string[]>([])
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+      try {
+        const raw = localStorage.getItem('userSkills')
+        if (raw) setSelected(JSON.parse(raw))
+      } catch {}
+    }, [])
+
+    const toggle = (skill: string) => {
+      setSelected((prev) => prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill])
+    }
+
+    const save = async () => {
+      setSaving(true)
+      try {
+        // Persist to backend user profile
+        await fetch('/api/users/me', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-user-email': String(userEmail || '') },
+          body: JSON.stringify({ skills: selected })
+        })
+        localStorage.setItem('userSkills', JSON.stringify(selected))
+        onSaved(selected)
+        setOpen(false)
+      } finally {
+        setSaving(false)
+      }
+    }
+
+    return (
+      <div className="mt-4">
+        {!open ? (
+          <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
+            Ավելացնել հմտություն
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              {Object.keys(categories).map((cat) => (
+                <button key={cat} onClick={() => setSelectedCategory(cat as any)} className={`px-3 py-1.5 rounded-full text-sm border ${selectedCategory===cat ? 'bg-primary-600 text-white border-primary-600' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'}`}>{cat}</button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categories[selectedCategory].map((skill) => (
+                <button key={skill} onClick={() => toggle(skill)} className={`px-3 py-1.5 rounded-full text-sm border transition ${selected.includes(skill) ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'}`}>{selected.includes(skill) ? '✓ ' : ''}{skill}</button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={save} disabled={saving}>{saving ? 'Պահպանվում է...' : 'Պահպանել'}</Button>
+              <Button size="sm" variant="outline" onClick={() => setOpen(false)}>Փակել</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   useEffect(() => {
     // Простая проверка аутентификации через localStorage
     const userEmail = localStorage.getItem('userEmail')
@@ -426,18 +495,13 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {user?.skills ? (
+                  {user?.skills && JSON.parse(user.skills).length > 0 ? (
                     JSON.parse(user.skills).map((skill: string, index: number) => (
                       <div key={index} className="flex items-center justify-between">
                         <span className="text-sm text-neutral-700">{skill}</span>
                         <div className="flex items-center gap-1">
                           {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`h-3 w-3 ${
-                                i < Math.min(index + 2, 5) ? 'text-yellow-400 fill-current' : 'text-neutral-300'
-                              }`} 
-                            />
+                            <Star key={i} className={`h-3 w-3 ${i < 3 ? 'text-yellow-400 fill-current' : 'text-neutral-300'}`} />
                           ))}
                         </div>
                       </div>
@@ -449,9 +513,9 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  Ավելացնել հմտություն
-                </Button>
+                <SkillsEditor userEmail={user?.email} onSaved={async (newSkills) => {
+                  setUser((prev: any) => ({ ...prev, skills: JSON.stringify(newSkills) }))
+                }} />
               </CardContent>
             </Card>
           </div>

@@ -22,15 +22,19 @@ export default function ClientOnlyApply() {
     const form = new FormData(e.currentTarget)
     const coverLetter = String(form.get('coverLetter') || '')
     const proposedTimeline = String(form.get('proposedTimeline') || '1')
-    const userEmail = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || '') : ''
     const projectId = typeof window !== 'undefined' ? (window.location.pathname.split('/').pop() || '') : ''
     const r = await fetch('/api/applications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId, coverLetter, proposedTimeline, userEmail })
+      body: JSON.stringify({ projectId, coverLetter, proposedTimeline })
     })
-    if (r.ok) alert('Դիմումը ուղարկված է ադմինին')
-    else alert('Սխալ դիմում ուղարկելիս')
+    if (r.ok) {
+      const event = new CustomEvent('sb-toast', { detail: { message: 'Դիմումը ուղարկված է ադմինին', type: 'success' } })
+      window.dispatchEvent(event)
+    } else {
+      const event = new CustomEvent('sb-toast', { detail: { message: 'Սխալ դիմում ուղարկելիս', type: 'error' } })
+      window.dispatchEvent(event)
+    }
   }
 
   return (
@@ -43,5 +47,6 @@ export default function ClientOnlyApply() {
     </form>
   )
 }
+
 
 

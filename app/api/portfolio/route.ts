@@ -1,48 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
 
 // GET /api/portfolio - Получить портфолио пользователя
 export async function GET(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const category = searchParams.get('category')
-    const search = searchParams.get('search')
+    const userId = session.userId
+    const category = searchParams.get('category') || 'all'
+    const search = searchParams.get('search') || ''
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    // Получаем проекты пользователя
-    let projectsWhere: any = { userId }
-    if (category && category !== 'all') {
-      projectsWhere.category = category
-    }
-    if (search) {
-      projectsWhere.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { skills: { hasSome: [search] } }
-      ]
-    }
-
-    const projects = await prisma.project.findMany({
-      where: projectsWhere,
-      include: {
-        skills: true,
-        reviews: {
-          include: {
-            user: {
-              select: { name: true, avatar: true }
-            }
-          }
-        }
+    // Получаем портфолио проекты пользователя
+    const projects = await prisma.portfolioProject.findMany({
+      where: {
+        userId,
+        ...(category !== 'all' ? { category } : {}),
+        ...(search ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+            { tags: { contains: search, mode: 'insensitive' } },
+          ]
+        } : {})
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    // Получаем навыки пользователя
-    const skills = await prisma.skill.findMany({
+    // Получаем навыки пользователя для портфолио
+    const skills = await prisma.portfolioSkill.findMany({
       where: { userId },
       orderBy: { level: 'desc' }
     })
@@ -51,10 +42,10 @@ export async function GET(request: NextRequest) {
     const totalProjects = projects.length
     const totalEarnings = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
     const averageRating = projects.length > 0 
-      ? projects.reduce((sum, p) => sum + (p.averageRating || 0), 0) / projects.length 
+      ? projects.reduce((sum, p) => sum + (p.rating || 0), 0) / projects.length 
       : 0
-    const completedProjects = projects.filter(p => p.status === 'completed').length
-    const activeProjects = projects.filter(p => p.status === 'in-progress').length
+    const completedProjects = projects.filter((p: any) => p.status === 'completed').length
+    const activeProjects = projects.filter((p: any) => p.status === 'in-progress').length
 
     const stats = {
       totalProjects,
@@ -82,15 +73,14 @@ export async function GET(request: NextRequest) {
 // POST /api/portfolio - Создать новый проект или навык
 export async function POST(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const { type, data, userId } = body
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+    const { type, data } = body
+    const userId = session.userId
 
     if (type === 'project') {
-      const project = await prisma.project.create({
+      const project = await prisma.portfolioProject.create({
         data: {
           ...data,
           userId,
@@ -102,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'skill') {
-      const skill = await prisma.skill.create({
+      const skill = await prisma.portfolioSkill.create({
         data: {
           ...data,
           userId,
@@ -126,15 +116,14 @@ export async function POST(request: NextRequest) {
 // PUT /api/portfolio - Обновить проект или навык
 export async function PUT(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const body = await request.json()
-    const { type, id, data, userId } = body
-
-    if (!userId || !id) {
-      return NextResponse.json({ error: 'User ID and item ID are required' }, { status: 400 })
-    }
+    const { type, id, data } = body
+    const userId = session.userId
 
     if (type === 'project') {
-      const project = await prisma.project.update({
+      const project = await prisma.portfolioProject.update({
         where: { id, userId },
         data: {
           ...data,
@@ -145,7 +134,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (type === 'skill') {
-      const skill = await prisma.skill.update({
+      const skill = await prisma.portfolioSkill.update({
         where: { id, userId },
         data: {
           ...data,
@@ -168,24 +157,26 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/portfolio - Удалить проект или навык
 export async function DELETE(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const id = searchParams.get('id')
-    const userId = searchParams.get('userId')
+    const userId = session.userId
 
     if (!userId || !id || !type) {
       return NextResponse.json({ error: 'Type, ID and User ID are required' }, { status: 400 })
     }
 
     if (type === 'project') {
-      await prisma.project.delete({
+      await prisma.portfolioProject.delete({
         where: { id, userId }
       })
       return NextResponse.json({ message: 'Project deleted successfully' })
     }
 
     if (type === 'skill') {
-      await prisma.skill.delete({
+      await prisma.portfolioSkill.delete({
         where: { id, userId }
       })
       return NextResponse.json({ message: 'Skill deleted successfully' })

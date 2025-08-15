@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function GET(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { searchParams } = new URL(req.url)
     const mentorId = searchParams.get('mentorId')
-    const userId = searchParams.get('userId')
     const status = searchParams.get('status')
 
     const where: any = {}
-    
-    if (mentorId) where.mentorId = mentorId
-    if (userId) where.userId = userId
+    if (mentorId) {
+      if (session.userType !== 'admin' && session.userId !== mentorId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      where.mentorId = mentorId
+    } else {
+      where.userId = session.userId
+    }
     if (status) where.status = status
 
     const sessions = await prisma.session.findMany({
@@ -29,9 +37,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { mentorId, userId, startTime, endTime, notes } = await req.json()
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const rl = await rateLimit(req.headers, { id: 'sessions:create', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
+    const { mentorId, startTime, endTime, notes } = await req.json()
     
-    if (!mentorId || !userId || !startTime || !endTime) {
+    if (!mentorId || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -44,20 +57,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mentor not found' }, { status: 404 })
     }
 
-    // Проверяем, существует ли пользователь
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Создаем сессию
     const session = await prisma.session.create({
       data: {
         mentorId,
-        userId,
+        userId: session.userId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         notes

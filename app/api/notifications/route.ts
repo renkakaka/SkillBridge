@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 // GET /api/notifications - Получить уведомления пользователя
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
     const filter = searchParams.get('filter') || 'all'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
+    const countOnly = searchParams.get('countOnly') === 'true'
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -45,6 +50,24 @@ export async function GET(request: NextRequest) {
       // 'all' - без дополнительных фильтров
     }
 
+    // Получаем общую статистику (используется и для countOnly)
+    const totalCountPromise = prisma.notification.count({ where: { userId } })
+    const unreadCountPromise = prisma.notification.count({ where: { userId, isRead: false } })
+    const importantCountPromise = prisma.notification.count({ where: { userId, isImportant: true } })
+
+    if (countOnly) {
+      const [totalCount, unreadCount, importantCount] = await Promise.all([
+        totalCountPromise,
+        unreadCountPromise,
+        importantCountPromise,
+      ])
+      return NextResponse.json({
+        notifications: [],
+        stats: { total: totalCount, unread: unreadCount, important: importantCount },
+        pagination: { limit: 0, offset: 0, total: totalCount, hasMore: false }
+      })
+    }
+
     // Получаем уведомления
     const notifications = await prisma.notification.findMany({
       where: whereClause,
@@ -52,8 +75,9 @@ export async function GET(request: NextRequest) {
         sender: {
           select: {
             id: true,
-            name: true,
-            avatar: true
+            fullName: true,
+            avatarUrl: true,
+            email: true
           }
         }
       },
@@ -62,24 +86,15 @@ export async function GET(request: NextRequest) {
       skip: offset
     })
 
-    // Получаем общую статистику
-    const totalCount = await prisma.notification.count({ where: { userId } })
-    const unreadCount = await prisma.notification.count({ 
-      where: { userId, isRead: false } 
-    })
-    const importantCount = await prisma.notification.count({ 
-      where: { userId, isImportant: true } 
-    })
-
-    const stats = {
-      total: totalCount,
-      unread: unreadCount,
-      important: importantCount
-    }
+    const [totalCount, unreadCount, importantCount] = await Promise.all([
+      totalCountPromise,
+      unreadCountPromise,
+      importantCountPromise,
+    ])
 
     return NextResponse.json({
       notifications,
-      stats,
+      stats: { total: totalCount, unread: unreadCount, important: importantCount },
       pagination: {
         limit,
         offset,
@@ -99,8 +114,12 @@ export async function GET(request: NextRequest) {
 // POST /api/notifications - Создать новое уведомление
 export async function POST(request: NextRequest) {
   try {
+    const rl = await rateLimit(request.headers, { id: 'notifications:post', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     const body = await request.json()
-    const { userId, type, title, message, isImportant = false, metadata = {}, senderId } = body
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId = session.userId, type, title, message, isImportant = false, metadata = {}, senderId = session.userId } = body
 
     if (!userId || !type || !title || !message) {
       return NextResponse.json({ 
@@ -165,8 +184,13 @@ export async function POST(request: NextRequest) {
 // PUT /api/notifications - Обновить уведомления
 export async function PUT(request: NextRequest) {
   try {
+    const rl = await rateLimit(request.headers, { id: 'notifications:put', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     const body = await request.json()
-    const { action, userId, notificationIds, conversationId } = body
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { action, notificationIds, conversationId, settings } = body
+    const userId = session.userId
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -233,6 +257,17 @@ export async function PUT(request: NextRequest) {
         })
         return NextResponse.json({ message: 'Notifications marked as unimportant' })
 
+      case 'updateSettings':
+        if (!settings || typeof settings !== 'object') {
+          return NextResponse.json({ error: 'Settings object is required' }, { status: 400 })
+        }
+        await prisma.userNotificationSettings.upsert({
+          where: { userId },
+          update: { ...settings, updatedAt: new Date() },
+          create: { userId, ...settings, createdAt: new Date(), updatedAt: new Date() }
+        })
+        return NextResponse.json({ message: 'Notification settings updated' })
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
@@ -249,7 +284,9 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
     const notificationIds = searchParams.get('notificationIds')
     const deleteAll = searchParams.get('deleteAll') === 'true'
 

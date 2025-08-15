@@ -8,6 +8,7 @@ import AuthenticatedNavbar from '@/components/AuthenticatedNavbar'
 import Footer from '@/components/Footer'
 import ScrollProgress from '@/components/ScrollProgress'
 import ClientNavbar from '@/components/ClientNavbar'
+import ToastHost from '@/components/ToastHost'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,6 +56,7 @@ export default function RootLayout({
         <ScrollProgress />
         <div className="flex min-h-screen flex-col">
           <ClientNavbar />
+          <ToastHost />
           <main className="flex-1">
             {children}
           </main>

@@ -14,10 +14,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/dashboard', 
     '/profile',
     '/achievements',
+    '/earnings',
+    '/portfolio',
+    '/marketplace',
+    '/messages',
+    '/notifications',
+    '/settings',
     '/admin',
     '/admin/users',
     '/admin/stats',
-    '/admin/settings'
+    '/admin/settings',
+    '/admin/newsletter'
   ]
   return routes.map((path) => ({
     url: `${baseUrl}${path}`,

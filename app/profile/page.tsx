@@ -54,23 +54,23 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>({
-    id: '1',
-    fullName: 'Վազգեն Կարամյան',
-    email: 'vazgen@example.com',
-    userType: 'mentor',
-    bio: 'Full Stack Developer with 5+ years of experience in React, Node.js, and TypeScript. Passionate about teaching and helping newcomers grow in their careers.',
-    location: 'Երևան, Հայաստան',
-    website: 'https://vazgen.dev',
-    skills: ['React', 'Node.js', 'TypeScript', 'Next.js', 'PostgreSQL', 'Docker'],
-    experience: '5+ տարի',
-    rating: 4.9,
-    totalProjects: 15,
-    completedProjects: 14,
-    totalEarnings: 2500,
-    level: 5,
-    achievements: 8,
-    joinDate: '2023-01-15',
-    lastSeen: '2024-01-20'
+    id: '',
+    fullName: 'Անուն Ազգանուն',
+    email: '',
+    userType: 'newcomer',
+    bio: '',
+    location: '',
+    website: '',
+    skills: [],
+    experience: '',
+    rating: 0,
+    totalProjects: 0,
+    completedProjects: 0,
+    totalEarnings: 0,
+    level: 1,
+    achievements: 0,
+    joinDate: '',
+    lastSeen: ''
   })
 
   const [isEditing, setIsEditing] = useState(false)
@@ -78,12 +78,36 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await fetch('/api/users/me')
+        if (!res.ok) return
+        const data = await res.json()
+        setProfile({
+          id: data.id,
+          fullName: data.fullName || 'Անուն Ազգանուն',
+          email: data.email,
+          userType: data.userType,
+          avatarUrl: data.avatarUrl,
+          bio: data.bio || '',
+          location: data.location || '',
+          website: data.website || '',
+          skills: (() => { try { return JSON.parse(data.skills || '[]') } catch { return [] } })(),
+          experience: data.experienceLevel || '',
+          rating: 0,
+          totalProjects: 0,
+          completedProjects: 0,
+          totalEarnings: 0,
+          level: 1,
+          achievements: 0,
+          joinDate: new Date(data.createdAt).toISOString().slice(0, 10),
+          lastSeen: data.lastSeen ? new Date(data.lastSeen).toISOString().slice(0, 10) : ''
+        })
+        setEditData((prev) => ({ ...prev, fullName: data.fullName || 'Անուն Ազգանուն', email: data.email }))
+      } catch {}
+    }
     loadProfile()
   }, [])
-
-  const loadProfile = () => {
-    // Здесь будет API вызов для загрузки профиля
-  }
 
   const handleSave = async () => {
     setIsLoading(true)
@@ -213,16 +237,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      {isEditing ? (
-                        <Input
-                          id="email"
-                          type="email"
-                          value={editData.email}
-                          onChange={(e) => setEditData({...editData, email: e.target.value})}
-                        />
-                      ) : (
-                        <p className="text-lg text-neutral-600">{profile.email}</p>
-                      )}
+                      <p className="text-lg text-neutral-600">{profile.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') : '')}</p>
                     </div>
                   </div>
                   
@@ -304,7 +319,8 @@ export default function ProfilePage() {
           </Card>
 
           {/* Статистика */}
-          <Card>
+               {Boolean(profile.totalProjects || profile.completedProjects || profile.level || profile.achievements) && (
+               <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -331,7 +347,8 @@ export default function ProfilePage() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+               </Card>
+               )}
         </div>
 
         {/* Правая колонка - Дополнительная информация */}
@@ -390,7 +407,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Достижения */}
+          {/* Достижения (реальные) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -399,24 +416,48 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                <Trophy className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <div className="text-sm font-medium">Առաջին նախագիծ</div>
-                  <div className="text-xs text-neutral-600">Ավարտվել է 2 օր առաջ</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                <Target className="h-5 w-5 text-blue-600" />
-                <div>
-                  <div className="text-sm font-medium">Մակարդակ 5</div>
-                  <div className="text-xs text-neutral-600">Հասել եք 1 շաբաթ առաջ</div>
-                </div>
-              </div>
+              <RecentAchievements email={profile.email} />
             </CardContent>
           </Card>
         </div>
       </div>
+    </div>
+  )
+}
+
+function RecentAchievements({ email }: { email: string }) {
+  const [items, setItems] = useState<{ id: string; title: string; unlockedAt?: string }[]>([])
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const meRes = await fetch('/api/users/me')
+        if (!meRes.ok) return
+        const me = await meRes.json()
+        const r = await fetch(`/api/achievements?userId=${encodeURIComponent(me.id)}`)
+        if (!r.ok) return
+        const data = await r.json()
+        const ua = Array.isArray(data.achievements) ? data.achievements.slice(0, 3).map((x: any) => ({ id: x.id, title: x.achievement?.title || 'Achievement', unlockedAt: x.unlockedAt })) : []
+        setItems(ua)
+      } catch {}
+    }
+    if (email) load()
+  }, [email])
+
+  if (items.length === 0) {
+    return <div className="text-sm text-neutral-500">Դեռ հաջողություններ չկան</div>
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((a) => (
+        <div key={a.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border">
+          <Trophy className="h-5 w-5 text-yellow-600" />
+          <div>
+            <div className="text-sm font-medium">{a.title}</div>
+            {a.unlockedAt && <div className="text-xs text-neutral-600">Բացված է {new Date(a.unlockedAt).toLocaleDateString('hy-AM')}</div>}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

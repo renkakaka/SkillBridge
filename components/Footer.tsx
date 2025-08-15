@@ -96,24 +96,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Newsletter */}
-        <div className="border-t border-neutral-700 pt-8 mb-8">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-white mb-2">Բաժանորդագրվել նորություններին</h3>
-            <p className="text-neutral-300 mb-4">Ստացեք վերջին թարմացումները և նոր հնարավորությունները</p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Ձեր email-ը"
-                className="flex-1 px-4 py-3 rounded-lg bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 focus:border-transparent"
-              />
-              <button className="px-6 py-3 bg-gradient-primary text-white font-medium rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5">
-                Բաժանորդագրվել
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Bottom */}
         <div className="border-t border-neutral-700 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="text-neutral-400 text-sm mb-4 md:mb-0">

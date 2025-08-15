@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Search, Filter, MapPin, Clock, DollarSign, Star, Users, Briefcase } from 'lucide-react'
+import { Search, Filter, MapPin, Clock, DollarSign, Star, Users, Briefcase, X } from 'lucide-react'
 
 interface Project {
   id: string
@@ -28,6 +28,9 @@ export default function MarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedBudget, setSelectedBudget] = useState('all')
   const [selectedDuration, setSelectedDuration] = useState('all')
+  const [applyProjectId, setApplyProjectId] = useState<string | null>(null)
+  const [coverLetter, setCoverLetter] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const categories = [
     { id: 'all', label: 'Բոլորը' },
@@ -104,26 +107,35 @@ export default function MarketplacePage() {
   })
 
   const handleApply = async (projectId: string) => {
+    setApplyProjectId(projectId)
+    setCoverLetter('')
+  }
+
+  const submitApplication = async () => {
+    if (!applyProjectId || !coverLetter.trim()) return
     try {
       const response = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectId,
+          projectId: applyProjectId,
           userEmail: localStorage.getItem('userEmail'),
-          coverLetter: 'Իմ դիմումը այս նախագծի համար',
-          proposedBudget: 0,
-          estimatedDuration: '1 շաբաթ'
+          coverLetter,
+          proposedTimeline: '1'
         })
       })
-      
       if (response.ok) {
-        alert('Դիմումը հաջողությամբ ուղարկվել է!')
+        setApplyProjectId(null)
+        setCoverLetter('')
+        setToast({ message: 'Դիմումը հաջողությամբ ուղարկվել է!', type: 'success' })
+        setTimeout(() => setToast(null), 3000)
       } else {
-        alert('Սխալ է տեղի ունեցել դիմում ուղարկելիս')
+        setToast({ message: 'Սխալ է տեղի ունեցել դիմում ուղարկելիս', type: 'error' })
+        setTimeout(() => setToast(null), 3000)
       }
     } catch (error) {
-      alert('Սխալ է տեղի ունեցել')
+      setToast({ message: 'Սխալ է տեղի ունեցել', type: 'error' })
+      setTimeout(() => setToast(null), 3000)
     }
   }
 
@@ -271,6 +283,31 @@ export default function MarketplacePage() {
           ))
         )}
       </div>
+
+      {applyProjectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Դիմում նախագծին</h3>
+              <button onClick={() => setApplyProjectId(null)} className="p-2 rounded hover:bg-neutral-100"><X className="h-5 w-5"/></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-neutral-600">Նկարագրեք հակիրճ՝ ինչու եք դուք ճիշտ մասնագետը․</p>
+              <textarea value={coverLetter} onChange={(e)=>setCoverLetter(e.target.value)} className="w-full border rounded-lg p-3 h-40 focus:outline-none focus:ring-2 focus:ring-primary-500/30" placeholder={`— Ում համար է դիմումը\n— Ի՞նչ արժեք եք ստեղծում նախագծի համար\n— Կարճ պլան (քայլերով)\n— Ժամկետ/գումար (եթե առաջարկում եք)`}/>
+            </div>
+            <div className="p-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setApplyProjectId(null)}>Փակել</Button>
+              <Button onClick={submitApplication} disabled={!coverLetter.trim()}>Ուղարկել</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

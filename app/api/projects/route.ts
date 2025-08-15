@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,6 +31,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const rl = await rateLimit(req.headers, { id: 'projects:create', limit: 20, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     const { 
       title, 
       description, 
@@ -45,13 +51,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Проверяем, существует ли клиент
-    const client = await prisma.user.findUnique({
-      where: { id: clientId }
-    })
+    // Проверяем, существует ли клиент и что клиент совпадает с текущей сессией (либо админ)
+    const client = await prisma.user.findUnique({ where: { id: clientId } })
 
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+    if (session.userType !== 'admin' && client.id !== session.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Преобразуем requiredSkills в JSON строку

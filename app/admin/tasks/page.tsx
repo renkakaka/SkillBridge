@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -56,13 +57,9 @@ export default function AdminTasksPage() {
     } catch (e: any) { setError(e?.message || 'Սխալ') }
   }
 
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const deleteProject = async (id: string) => {
-    if (!confirm('Ջնջե՞լ առաջադրանքը')) return
-    try {
-      const r = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
-      if (!r.ok) throw new Error((await r.json()).error || 'Սխալ')
-      load()
-    } catch (e: any) { setError(e?.message || 'Սխալ') }
+    setDeleteId(id)
   }
 
   return (
@@ -109,6 +106,29 @@ export default function AdminTasksPage() {
           )}
         </CardContent>
       </Card>
+
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="font-semibold text-red-600">Ջնջել առաջադրանքը</div>
+              <button onClick={() => setDeleteId(null)} className="p-2 rounded hover:bg-neutral-100"><X className="h-5 w-5"/></button>
+            </div>
+            <div className="p-4 text-sm text-neutral-700">Վստահ եք, որ ցանկանում եք ջնջել այս առաջադրանքը? Կապված հայտերը նույնպես կջնջվեն։</div>
+            <div className="p-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteId(null)}>Չեղարկել</Button>
+              <Button variant="destructive" onClick={async () => {
+                try {
+                  const r = await fetch(`/api/projects/${deleteId}`, { method: 'DELETE' })
+                  if (!r.ok) throw new Error((await r.json()).error || 'Սխալ')
+                  setDeleteId(null)
+                  load()
+                } catch (e: any) { setError(e?.message || 'Սխալ') }
+              }}>Ջնջել</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

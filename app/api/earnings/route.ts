@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
 
 // GET /api/earnings - Получить данные о заработках пользователя
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
     const period = searchParams.get('period') || 'month'
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -62,37 +65,10 @@ export async function GET(request: NextRequest) {
         userId,
         ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
       },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-            client: {
-              select: {
-                name: true,
-                avatar: true
-              }
-            }
-          }
-        }
-      },
       orderBy: { createdAt: 'desc' }
     })
 
-    // Получаем проекты пользователя для расчета статистики
-    const projects = await prisma.project.findMany({
-      where: {
-        userId,
-        ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
-      },
-      select: {
-        id: true,
-        budget: true,
-        status: true,
-        createdAt: true,
-        completedAt: true
-      }
-    })
+    // Промежуточно: не считаем pending по проектам (структура Project отличается)
 
     // Рассчитываем статистику
     const totalEarnings = transactions
@@ -107,9 +83,7 @@ export async function GET(request: NextRequest) {
       })
       .reduce((sum, t) => sum + t.amount, 0)
     
-    const pendingAmount = projects
-      .filter(p => p.status === 'in-progress')
-      .reduce((sum, p) => sum + (p.budget || 0), 0)
+    const pendingAmount = 0
     
     const availableBalance = totalEarnings - pendingAmount
     
@@ -141,7 +115,7 @@ export async function GET(request: NextRequest) {
 
     // Получаем данные для графиков
     const monthlyData = await getMonthlyEarningsData(userId, period)
-    const categoryData = await getCategoryEarningsData(userId, period)
+    const categoryData = await getCategoryEarningsDataFromTransactions(userId, period)
 
     const stats = {
       totalEarnings,
@@ -149,8 +123,8 @@ export async function GET(request: NextRequest) {
       pendingAmount,
       availableBalance,
       growthRate: Math.round(growthRate * 10) / 10,
-      projectCount: projects.length,
-      completedProjects: projects.filter(p => p.status === 'completed').length
+      projectCount: 0,
+      completedProjects: 0
     }
 
     return NextResponse.json({
@@ -345,60 +319,38 @@ async function getMonthlyEarningsData(userId: string, period: string) {
   return { labels: months, data: earnings }
 }
 
-async function getCategoryEarningsData(userId: string, period: string) {
+async function getCategoryEarningsDataFromTransactions(userId: string, period: string) {
   const now = new Date()
   let dateFilter: any = {}
-  
-  // Определяем период для фильтрации
   switch (period) {
     case 'month':
-      dateFilter = {
-        gte: new Date(now.getFullYear(), now.getMonth(), 1)
-      }
+      dateFilter = { gte: new Date(now.getFullYear(), now.getMonth(), 1), lte: now }
       break
     case 'quarter':
-      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-      dateFilter = { gte: quarterStart }
+      dateFilter = { gte: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), lte: now }
       break
     case 'year':
-      dateFilter = { gte: new Date(now.getFullYear(), 0, 1) }
+      dateFilter = { gte: new Date(now.getFullYear(), 0, 1), lte: now }
+      break
+    default:
       break
   }
-
-  // Получаем проекты с категориями
-  const projects = await prisma.project.findMany({
-    where: {
-      userId,
-      ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
-    },
-    select: {
-      category: true,
-      budget: true
-    }
+  const txs = await prisma.transaction.findMany({
+    where: { userId, type: 'income', ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }) },
+    select: { amount: true, metadata: true }
   })
-
-  // Группируем по категориям
   const categoryMap = new Map<string, number>()
-  
-  projects.forEach(project => {
-    const category = project.category || 'other'
-    const current = categoryMap.get(category) || 0
-    categoryMap.set(category, current + (project.budget || 0))
-  })
-
-  // Форматируем для графика
-  const labels = Array.from(categoryMap.keys()).map(cat => {
-    switch (cat) {
-      case 'frontend': return 'Վեբ Զարգացում'
-      case 'backend': return 'Backend Զարգացում'
-      case 'mobile': return 'Մոբայլ Զարգացում'
-      case 'design': return 'Դիզայն'
-      case 'other': return 'Այլ'
-      default: return cat
+  for (const t of txs) {
+    let category = 'other'
+    if (t.metadata) {
+      try {
+        const meta = typeof t.metadata === 'string' ? JSON.parse(t.metadata) : t.metadata
+        if (meta && typeof meta.category === 'string') category = meta.category
+      } catch {}
     }
-  })
-  
+    categoryMap.set(category, (categoryMap.get(category) || 0) + t.amount)
+  }
+  const labels = Array.from(categoryMap.keys())
   const data = Array.from(categoryMap.values())
-
   return { labels, data }
 }

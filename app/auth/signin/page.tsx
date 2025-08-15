@@ -35,6 +35,9 @@ export default function SignInPage() {
         localStorage.setItem('userFullName', data.user.fullName)
         localStorage.setItem('userType', data.user.userType)
         localStorage.setItem('emailVerified', String(Boolean(data.user.emailVerified)))
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('sb-auth-changed'))
+        }
         setTimeout(() => {
           setIsLoading(false)
           window.location.href = '/dashboard'

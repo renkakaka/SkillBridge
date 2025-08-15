@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
+import { getSessionFromRequest } from '@/lib/auth'
+import { rateLimit } from '@/lib/rateLimit'
 
 // GET /api/messages - Получить разговоры пользователя
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
     const conversationId = searchParams.get('conversationId')
 
     if (!userId) {
@@ -13,35 +17,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (conversationId) {
-      // Получаем сообщения конкретного разговора
-      const messages = await prisma.message.findMany({
+      const msgs = await prisma.message.findMany({
         where: {
           conversationId,
-          OR: [
-            { senderId: userId },
-            { recipientId: userId }
-          ]
+          OR: [ { senderId: userId }, { recipientId: userId } ]
         },
         include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              avatar: true,
-              email: true
-            }
-          },
-          recipient: {
-            select: {
-              id: true,
-              name: true,
-              avatar: true,
-              email: true
-            }
-          }
+          sender: { select: { id: true, fullName: true, avatarUrl: true, email: true } },
+          recipient: { select: { id: true, fullName: true, avatarUrl: true, email: true } }
         },
         orderBy: { createdAt: 'asc' }
       })
+
+      const messages = msgs.map(m => ({
+        id: m.id,
+        conversationId: m.conversationId,
+        content: m.content,
+        type: m.type,
+        isRead: m.isRead,
+        createdAt: m.createdAt,
+        sender: { id: m.sender.id, name: m.sender.fullName, avatar: m.sender.avatarUrl || '', email: m.sender.email },
+        recipient: { id: m.recipient.id, name: m.recipient.fullName, avatar: m.recipient.avatarUrl || '', email: m.recipient.email }
+      }))
 
       return NextResponse.json({ messages })
     }
@@ -55,31 +52,9 @@ export async function GET(request: NextRequest) {
         ]
       },
       include: {
-        participant1: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            email: true,
-            lastSeen: true
-          }
-        },
-        participant2: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            email: true,
-            lastSeen: true
-          }
-        },
-        lastMessage: {
-          select: {
-            content: true,
-            createdAt: true,
-            isRead: true
-          }
-        },
+        participant1: { select: { id: true, fullName: true, avatarUrl: true, email: true, lastSeen: true } },
+        participant2: { select: { id: true, fullName: true, avatarUrl: true, email: true, lastSeen: true } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         _count: {
           select: {
             messages: {
@@ -94,31 +69,84 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' }
     })
 
-    // Форматируем разговоры для фронтенда
-    const formattedConversations = conversations.map(conv => {
+    let formattedConversations = conversations.map(conv => {
       const isParticipant1 = conv.participant1Id === userId
-      const otherParticipant = isParticipant1 ? conv.participant2 : conv.participant1
+      const p = isParticipant1 ? conv.participant2 : conv.participant1
       const unreadCount = conv._count.messages
 
       return {
         id: conv.id,
         participant: {
-          id: otherParticipant.id,
-          name: otherParticipant.name,
-          avatar: otherParticipant.avatar,
-          isOnline: otherParticipant.lastSeen ? 
-            (Date.now() - otherParticipant.lastSeen.getTime()) < 5 * 60 * 1000 : false,
-          lastSeen: otherParticipant.lastSeen
+          id: p.id,
+          name: p.fullName,
+          avatar: p.avatarUrl || '',
+          isOnline: p.lastSeen ? (Date.now() - p.lastSeen.getTime()) < 5 * 60 * 1000 : false,
+          lastSeen: p.lastSeen
         },
-        lastMessage: conv.lastMessage ? {
-          content: conv.lastMessage.content,
-          timestamp: conv.lastMessage.createdAt,
-          isRead: conv.lastMessage.isRead
+        lastMessage: conv.messages[0] ? {
+          content: conv.messages[0].content,
+          timestamp: conv.messages[0].createdAt,
+          isRead: conv.messages[0].isRead
         } : null,
         unreadCount,
         isActive: false
       }
     })
+
+    // Если нет ни одного разговора, создаём приветственный от админа
+    if (formattedConversations.length === 0) {
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
+        if (adminEmail) {
+          const admin = await prisma.user.findUnique({ where: { email: adminEmail } })
+          const user = await prisma.user.findUnique({ where: { id: userId } })
+          if (admin && user) {
+            // Проверяем, нет ли уже разговора
+            const existing = await prisma.conversation.findFirst({
+              where: {
+                OR: [
+                  { participant1Id: admin.id, participant2Id: userId },
+                  { participant1Id: userId, participant2Id: admin.id }
+                ]
+              }
+            })
+            const conversationId = existing ? existing.id : (await prisma.conversation.create({
+              data: { participant1Id: admin.id, participant2Id: userId }
+            })).id
+
+            await prisma.message.create({
+              data: {
+                conversationId,
+                senderId: admin.id,
+                recipientId: userId,
+                content: 'Բարի գալուստ SkillBridge!\n\n1) Լրացրեք պրոֆիլը և հմտությունները\n2) Իջեք Marketplace և դիմեք նախագծերին\n3) Ծանուցումները և հաղորդագրությունները կհայտնվեն վերեւում\n\nԵթե հարցեր ունեք՝ գրել այստեղ։',
+                type: 'text',
+                isRead: false
+              }
+            })
+
+            // Возвращаем созданный разговор
+            formattedConversations = [
+              {
+                id: conversationId,
+                participant: {
+                  id: admin.id,
+                  name: admin.fullName,
+                  avatar: admin.avatarUrl || '',
+                  isOnline: !!admin.lastSeen && (Date.now() - new Date(admin.lastSeen).getTime()) < 5 * 60 * 1000,
+                  lastSeen: admin.lastSeen || null
+                },
+                lastMessage: { content: 'Բարի գալուստ SkillBridge!', timestamp: new Date(), isRead: false },
+                unreadCount: 1,
+                isActive: false
+              }
+            ]
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to create welcome conversation:', e)
+      }
+    }
 
     return NextResponse.json({ conversations: formattedConversations })
   } catch (error) {
@@ -133,12 +161,13 @@ export async function GET(request: NextRequest) {
 // POST /api/messages - Создать новое сообщение или разговор
 export async function POST(request: NextRequest) {
   try {
+    const rl = await rateLimit(request.headers, { id: 'messages:post', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     const body = await request.json()
-    const { type, data, userId } = body
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+    const { type, data } = body
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
 
     if (type === 'message') {
       const { conversationId, recipientId, content } = data
@@ -216,10 +245,14 @@ export async function POST(request: NextRequest) {
 // PUT /api/messages - Отметить сообщения как прочитанные
 export async function PUT(request: NextRequest) {
   try {
+    const rl = await rateLimit(request.headers, { id: 'messages:put', limit: 60, windowMs: 60_000 })
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     const body = await request.json()
-    const { conversationId, userId } = body
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { conversationId } = body
 
-    if (!userId || !conversationId) {
+    if (!session.userId || !conversationId) {
       return NextResponse.json({ error: 'User ID and conversation ID are required' }, { status: 400 })
     }
 
@@ -227,13 +260,19 @@ export async function PUT(request: NextRequest) {
     await prisma.message.updateMany({
       where: {
         conversationId,
-        recipientId: userId,
+        recipientId: session.userId,
         isRead: false
       },
       data: {
         isRead: true,
         readAt: new Date()
       }
+    })
+
+    // Дополнительно отметим как прочитанные уведомления типа 'message'
+    await prisma.notification.updateMany({
+      where: { userId: session.userId, type: 'message', isRead: false },
+      data: { isRead: true, readAt: new Date() }
     })
 
     return NextResponse.json({ message: 'Messages marked as read' })
@@ -252,11 +291,9 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const messageId = searchParams.get('messageId')
     const conversationId = searchParams.get('conversationId')
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+    const session = getSessionFromRequest(request)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = session.userId
 
     if (messageId) {
       // Удаляем конкретное сообщение (только если пользователь является отправителем)

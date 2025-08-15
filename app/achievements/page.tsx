@@ -44,8 +44,37 @@ export default function AchievementsPage() {
   })
 
   useEffect(() => {
-    loadAchievements()
-    loadLevels()
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/achievements`)
+        if (!r.ok) return
+        const data = await r.json()
+        // Map to UI state
+        const ua = Array.isArray(data.achievements) ? data.achievements : []
+        const all = Array.isArray(data.allAchievements) ? data.allAchievements : []
+        setAchievements(all.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          icon: '🏆',
+          category: a.category || 'Հմտություններ',
+          points: a.points,
+          unlocked: ua.some((x: any) => x.achievementId === a.id && x.unlockedAt),
+          unlockedAt: (() => { const x = ua.find((x: any) => x.achievementId === a.id); return x?.unlockedAt || undefined })(),
+          progress: (() => { const x = ua.find((x: any) => x.achievementId === a.id); return x?.progress || 0 })(),
+          maxProgress: 100
+        })))
+        setStats({
+          totalPoints: data.stats?.totalPoints || 0,
+          totalAchievements: data.stats?.totalCount || all.length,
+          unlockedAchievements: data.stats?.unlockedCount || ua.filter((x: any) => x.unlockedAt).length,
+          currentLevel: data.stats?.currentLevel || 1,
+          nextLevelProgress: Math.round((data.stats?.levelProgress || 0))
+        })
+        loadLevels()
+      } catch {}
+    }
+    load()
   }, [])
 
   const loadAchievements = () => {
