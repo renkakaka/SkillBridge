@@ -8,7 +8,10 @@ import { TrendingUp, TrendingDown, DollarSign, Calendar, CreditCard, Wallet, Dow
 import dynamic from 'next/dynamic'
 
 // Динамический импорт Chart.js для избежания SSR проблем
-const Chart = dynamic(() => import('chart.js/auto'), { ssr: false })
+const Chart = dynamic(() => import('chart.js/auto').then(mod => ({ default: mod.default || mod })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64">Loading chart...</div>
+})
 
 interface Transaction {
   id: string
