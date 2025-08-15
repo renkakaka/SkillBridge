@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Создаем сессию
-    const session = await prisma.session.create({
+            const newSession = await prisma.session.create({
       data: {
         mentorId,
         userId: session.userId,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       include: { mentor: true, user: true }
     })
 
-    return NextResponse.json(session)
+            return NextResponse.json(newSession)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 400 })
