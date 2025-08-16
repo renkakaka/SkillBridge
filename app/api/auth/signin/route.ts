@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Устанавливаем защищенную сессию в cookie
-    setSessionCookie({
+    await setSessionCookie({
       userId: user.id,
       email: user.email,
       userType: user.userType as any,

@@ -7,9 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Mail, Lock, ArrowRight, Github, Chrome } from 'lucide-react'
 import { useTranslations } from '@/lib/useTranslations'
+import { useAuthContext } from '@/lib/AuthContext'
+import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
   const { t } = useTranslations()
+  const { signIn } = useAuthContext()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,41 +25,17 @@ export default function SignInPage() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        localStorage.setItem('userEmail', data.user.email)
-        localStorage.setItem('userFullName', data.user.fullName)
-        localStorage.setItem('userType', data.user.userType)
-        localStorage.setItem('emailVerified', String(Boolean(data.user.emailVerified)))
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('sb-auth-changed'))
-        }
-        setTimeout(() => {
-          setIsLoading(false)
-          window.location.href = '/dashboard'
-        }, 1000)
+      const result = await signIn(email, password)
+      
+      if (result.success) {
+        // Успешный вход - перенаправляем на дашборд
+        router.push('/dashboard')
       } else {
-        const errorData = await response.json()
-        if (errorData.needsVerification) {
-          setError('Խնդրում ենք հաստատել ձեր email հասցեն մուտք գործելու համար')
-          setTimeout(() => {
-            window.location.href = `/auth/verify-email?email=${encodeURIComponent(email)}`
-          }, 2000)
-        } else {
-          setError(errorData.error || 'Սխալ է տեղի ունեցել')
-        }
-        setIsLoading(false)
+        setError(result.error || 'Sign in failed')
       }
     } catch (error) {
-      setError('Սխալ է տեղի ունեցել')
+      setError('An error occurred during sign in')
+    } finally {
       setIsLoading(false)
     }
   }

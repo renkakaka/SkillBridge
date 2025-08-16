@@ -7,18 +7,20 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Github, Chrome, Check } from 'lucide-react'
 import { useTranslations } from '@/lib/useTranslations'
+import { useAuthContext } from '@/lib/AuthContext'
+import { useRouter } from 'next/navigation'
 
 export default function SignUpPage() {
   const { t } = useTranslations()
+  const { signUp } = useAuthContext()
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
-    confirmPassword: '',
     userType: 'newcomer' as 'newcomer' | 'mentor' | 'client'
   })
   const [error, setError] = useState('')
@@ -34,11 +36,7 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
+    setMessage('')
 
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long')
@@ -48,50 +46,20 @@ export default function SignUpPage() {
     setIsLoading(true)
     
     try {
-      // Сохраняем данные пользователя в localStorage для демонстрации
-      localStorage.setItem('userEmail', formData.email)
-      localStorage.setItem('userFullName', formData.fullName)
-      localStorage.setItem('userType', formData.userType)
+      const result = await signUp(formData)
       
-      // Отправляем данные на API
-      try {
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fullName: formData.fullName,
-            email: formData.email,
-            password: formData.password,
-            userType: formData.userType,
-            skills: [],
-            experienceLevel: 'beginner'
-          }),
-        })
-
-        if (response.ok) {
-          const user = await response.json()
-          // trigger email verification send
-          await fetch('/api/auth/verify-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: formData.email })
-          })
-          setMessage('Գրանցումը հաջողությամբ ավարտվել է! Ստուգեք ձեր email-ը հաստատման համար:')
-          setTimeout(() => {
-            window.location.href = `/auth/verify-email?email=${encodeURIComponent(formData.email)}`
-          }, 1200)
-        } else {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Registration failed')
-        }
-      } catch (apiError) {
-        console.error('API registration failed:', apiError)
-        setError('Գրանցումը ձախողվել է: Խնդրում ենք փորձել կրկին:')
+      if (result.success) {
+        setMessage('Registration successful! Please check your email to verify your account.')
+        // Redirect to verification page after a short delay
+        setTimeout(() => {
+          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
+        }, 2000)
+      } else {
+        setError(result.error || 'Registration failed')
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Registration failed')
+      console.error('Registration error:', error)
+      setError('Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -169,7 +137,7 @@ export default function SignUpPage() {
               {/* User Type Field */}
               <div className="space-y-2">
                 <label htmlFor="userType" className="text-sm font-medium text-neutral-700">
-                  Օգտագործողի տեսակ
+                  User Type
                 </label>
                 <select
                   id="userType"
@@ -179,9 +147,9 @@ export default function SignUpPage() {
                   required
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2"
                 >
-                  <option value="newcomer">Նորեկ</option>
-                  <option value="mentor">Մենթոր</option>
-                  <option value="client">Հաճախորդ</option>
+                  <option value="newcomer">Newcomer</option>
+                  <option value="mentor">Mentor</option>
+                  <option value="client">Client</option>
                 </select>
               </div>
 
@@ -202,30 +170,17 @@ export default function SignUpPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 <p className="text-xs text-neutral-500">
                   {t('auth.signUp.passwordRequirements')}
                 </p>
-              </div>
-
-              {/* Confirm Password Field */}
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium text-neutral-700">
-                  {t('auth.signUp.confirmPassword')}
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder={t('auth.signUp.confirmPasswordPlaceholder')}
-                    required
-                    className="pl-10"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                  />
-                </div>
               </div>
 
               {/* Error Display */}
@@ -267,16 +222,6 @@ export default function SignUpPage() {
                     >
                       {t('auth.signUp.privacyPolicy')}
                     </Link>
-                  </div>
-                </label>
-
-                <label className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 rounded border-neutral-300 text-primary-600 focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2"
-                  />
-                  <div className="text-sm text-neutral-600">
-                    {t('auth.signUp.marketingConsent')}
                   </div>
                 </label>
               </div>

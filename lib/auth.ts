@@ -68,9 +68,10 @@ export function verifyJwt(token: string): SessionPayload | null {
   }
 }
 
-export function setSessionCookie(session: SessionPayload, maxAgeSeconds = 60 * 60 * 24 * 7) {
+export async function setSessionCookie(session: SessionPayload, maxAgeSeconds = 60 * 60 * 24 * 7) {
   const token = signJwt(session, maxAgeSeconds)
-  cookies().set('sb_session', token, {
+  const cookieStore = await cookies()
+  cookieStore.set('sb_session', token, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -79,8 +80,9 @@ export function setSessionCookie(session: SessionPayload, maxAgeSeconds = 60 * 6
   })
 }
 
-export function clearSessionCookie() {
-  cookies().set('sb_session', '', {
+export async function clearSessionCookie() {
+  const cookieStore = await cookies()
+  cookieStore.set('sb_session', '', {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -89,8 +91,9 @@ export function clearSessionCookie() {
   })
 }
 
-export function getSessionFromCookies(): SessionPayload | null {
-  const token = cookies().get('sb_session')?.value
+export async function getSessionFromCookies(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('sb_session')?.value
   if (!token) return null
   return verifyJwt(token)
 }
@@ -103,10 +106,11 @@ export function getSessionFromRequest(req: NextRequest): SessionPayload | null {
   return verifyJwt(token)
 }
 
-export function getAuthHeadersSession(): SessionPayload | null {
+export async function getAuthHeadersSession(): Promise<SessionPayload | null> {
   // fallback helper for places where we only have headers()
-  const cookieHeader = headers().get('cookie') || ''
-  const match = cookieHeader.split(/;\s*/).find(c => c.startsWith('sb_session='))
+  const headersStore = await headers()
+  const cookieHeader = headersStore.get('cookie') || ''
+  const match = cookieHeader.split(/;\s*/).find((c: string) => c.startsWith('sb_session='))
   if (!match) return null
   const token = decodeURIComponent(match.substring('sb_session='.length))
   return verifyJwt(token)

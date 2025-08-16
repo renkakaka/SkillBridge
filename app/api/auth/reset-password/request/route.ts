@@ -1,44 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import crypto from 'crypto'
-import nodemailer from 'nodemailer'
-import { Resend } from 'resend'
+import { rateLimit } from '@/lib/rateLimit'
+import { sendPasswordResetEmail } from '@/lib/email'
+import { passwordResetSchema } from '@/lib/validations'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
-    if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
-
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
-    if (!user) return NextResponse.json({ ok: true })
-
-    const token = crypto.randomBytes(32).toString('hex')
-    const expires = new Date(Date.now() + 60 * 60 * 1000)
-    await prisma.user.update({ where: { id: user.id }, data: { verificationToken: token, verificationTokenExpires: expires } })
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5174'
-    const resetLink = `${appUrl}/auth/reset-password?token=${token}&email=${encodeURIComponent(email)}`
-    const subject = 'Reset your password'
-    const html = `<p>Hello ${user.fullName},</p><p>Reset your password: <a href="${resetLink}">Reset</a></p><p>This link expires in 1 hour.</p>`
-
-    const resendKey = process.env.RESEND_API_KEY
-    if (resendKey) {
-      const resend = new Resend(resendKey)
-      await resend.emails.send({ from: process.env.RESEND_FROM || 'SkillBridge <onboarding@resend.dev>', to: email, subject, html })
-    } else {
-      const host = process.env.SMTP_HOST
-      const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined
-      const userName = process.env.SMTP_USER
-      const pass = process.env.SMTP_PASS
-      if (host && port && userName && pass) {
-        const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user: userName, pass } })
-        await transporter.sendMail({ from: process.env.MAIL_FROM_EMAIL || 'no-reply@skillbridge.local', to: email, subject, html })
-      }
+    const rl = await rateLimit(req.headers, { id: 'auth:reset-password', limit: 3, windowMs: 300_000 })
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
-    return NextResponse.json({ ok: true })
-  } catch (e) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    const body = await req.json()
+    const parsed = passwordResetSchema.safeParse(body)
+    
+    if (!parsed.success) {
+      return NextResponse.json({ 
+        error: 'Invalid email address' 
+      }, { status: 400 })
+    }
+
+    const { email } = parsed.data
+
+    // Находим пользователя
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    })
+
+    if (!user) {
+      // Не раскрываем информацию о существовании пользователя
+      return NextResponse.json({ 
+        message: 'If an account with that email exists, a password reset link has been sent.' 
+      })
+    }
+
+    // Генерируем токен для сброса пароля
+    const resetToken = crypto.randomUUID()
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 час
+
+    // Сохраняем токен в базе данных
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        verificationToken: resetToken, 
+        verificationTokenExpires: resetTokenExpires 
+      },
+    })
+
+    // Отправляем email для сброса пароля
+    try {
+      await sendPasswordResetEmail(email, resetToken, user.fullName)
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError)
+      return NextResponse.json({ 
+        error: 'Failed to send password reset email' 
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    })
+
+  } catch (e: unknown) {
+    console.error('Password reset request error:', e)
+    const message = e instanceof Error ? e.message : 'Unknown error occurred'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 

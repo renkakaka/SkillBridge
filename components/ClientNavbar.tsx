@@ -4,103 +4,18 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Navbar from './Navbar'
 import AuthenticatedNavbar from './AuthenticatedNavbar'
+import { useAuthContext } from '@/lib/AuthContext'
 
 export default function ClientNavbar() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { isAuthenticated, isLoading: authLoading } = useAuthContext()
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
+  console.log('ClientNavbar render:', { isAuthenticated, authLoading, mounted })
+
   useEffect(() => {
-    // Устанавливаем mounted сразу
     setMounted(true)
-    
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/users/me', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        })
-        
-        if (res.ok) {
-          setIsAuthenticated(true)
-        } else {
-          // Проверяем localStorage как fallback
-          const userEmail = localStorage.getItem('userEmail')
-          const userFullName = localStorage.getItem('userFullName')
-          const userType = localStorage.getItem('userType')
-          setIsAuthenticated(!!(userEmail && userFullName && userType))
-        }
-      } catch (error) {
-        // В случае ошибки используем localStorage
-        const userEmail = localStorage.getItem('userEmail')
-        const userFullName = localStorage.getItem('userFullName')
-        const userType = localStorage.getItem('userType')
-        setIsAuthenticated(!!(userEmail && userFullName && userType))
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    // Запускаем проверку сразу
-    checkAuth()
-
-    // Добавляем слушатель для изменений аутентификации
-    const handleAuthChange = () => {
-      checkAuth()
-    }
-
-    // Слушаем события изменения аутентификации
-    window.addEventListener('sb-auth-changed', handleAuthChange)
-    window.addEventListener('focus', handleAuthChange)
-    
-    // Слушаем изменения в localStorage
-    const handleStorageChange = () => {
-      checkAuth()
-    }
-    window.addEventListener('storage', handleStorageChange)
-
-    return () => {
-      window.removeEventListener('sb-auth-changed', handleAuthChange)
-      window.removeEventListener('focus', handleAuthChange)
-      window.removeEventListener('storage', handleStorageChange)
-    }
   }, [])
-
-  // Перепроверяем аутентификацию при смене маршрута
-  useEffect(() => {
-    if (mounted && !isLoading) {
-      const recheck = async () => {
-        try {
-          const res = await fetch('/api/users/me', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-          })
-          
-          if (res.ok) {
-            setIsAuthenticated(true)
-          } else {
-            const userEmail = localStorage.getItem('userEmail')
-            const userFullName = localStorage.getItem('userFullName')
-            const userType = localStorage.getItem('userType')
-            setIsAuthenticated(!!(userEmail && userFullName && userType))
-          }
-        } catch (error) {
-          const userEmail = localStorage.getItem('userEmail')
-          const userFullName = localStorage.getItem('userFullName')
-          const userType = localStorage.getItem('userType')
-          setIsAuthenticated(!!(userEmail && userFullName && userType))
-        }
-      }
-      recheck()
-    }
-  }, [pathname, mounted, isLoading])
 
   // Показываем загрузку только если компонент еще не смонтирован
   if (!mounted) {
@@ -115,6 +30,11 @@ export default function ClientNavbar() {
         </div>
       </header>
     )
+  }
+
+  // Если идет проверка аутентификации, показываем обычную навигацию
+  if (authLoading) {
+    return <Navbar />
   }
 
   // Показываем соответствующую навигацию

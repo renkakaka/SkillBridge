@@ -7,7 +7,7 @@ async function main() {
   const email = 'qaramyanv210@gmail.com'
   const password = 'Ren191909@'
   const fullName = 'Admin'
-  const userType: 'client' | 'mentor' | 'newcomer' = 'client'
+  const userType: 'client' | 'mentor' | 'newcomer' | 'admin' = 'admin'
 
   const hashedPassword = await bcrypt.hash(password, 12)
 

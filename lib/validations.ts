@@ -1,48 +1,11 @@
 import { z } from 'zod'
 
-// User registration schema
+// User registration schema - simplified version
 export const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   userType: z.enum(['newcomer', 'mentor', 'client']),
-  // Conditional fields based on user type
-  skills: z.array(z.string()).optional(),
-  experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
-  learningGoals: z.array(z.string()).optional(),
-  expertise: z.array(z.string()).optional(),
-  yearsOfExperience: z.number().min(0).optional(),
-  hourlyRate: z.number().min(0).optional(),
-  companyName: z.string().optional(),
-  projectTypes: z.array(z.string()).optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-}).refine((data) => {
-  if (data.userType === 'newcomer') {
-    return data.skills && data.experienceLevel && data.learningGoals
-  }
-  return true
-}, {
-  message: "Newcomer fields are required",
-  path: ["skills"],
-}).refine((data) => {
-  if (data.userType === 'mentor') {
-    return data.expertise && data.yearsOfExperience && data.hourlyRate
-  }
-  return true
-}, {
-  message: "Mentor fields are required",
-  path: ["expertise"],
-}).refine((data) => {
-  if (data.userType === 'client') {
-    return data.companyName && data.projectTypes
-  }
-  return true
-}, {
-  message: "Client fields are required",
-  path: ["companyName"],
 })
 
 // Login schema

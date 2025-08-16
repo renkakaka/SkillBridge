@@ -9,26 +9,27 @@ import Footer from '@/components/Footer'
 import ScrollProgress from '@/components/ScrollProgress'
 import ClientNavbar from '@/components/ClientNavbar'
 import ToastHost from '@/components/ToastHost'
+import { AuthProvider } from '@/lib/AuthContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SkillBridge - Զարգացրեք հմտությունները փորձագետների հետ',
-  description: 'Կարիերայի զարգացման հարթակ, որը միավորում է նորեկներին փորձառու մասնագետների հետ: Ստացեք գործնական փորձ՝ աշխատելով իրական ծրագրերի վրա:',
-  keywords: ['մենթորություն', 'ծրագրեր', 'կարիերա', 'փորձ', 'հմտություններ', 'զարգացում', 'դիզայն'],
+  title: 'SkillBridge - Develop Skills with Experts',
+  description: 'Career development platform that connects newcomers with experienced professionals. Get practical experience working on real projects.',
+  keywords: ['mentorship', 'projects', 'career', 'experience', 'skills', 'development', 'design'],
   authors: [{ name: 'SkillBridge Team' }],
   openGraph: {
-    title: 'SkillBridge - Զարգացրեք հմտությունները փորձագետների հետ',
-    description: 'Կարիերայի զարգացման հարթակ, որը միավորում է նորեկներին փորձառու մասնագետների հետ: Ստացեք գործնական փորձ՝ աշխատելով իրական ծրագրերի վրա:',
+    title: 'SkillBridge - Develop Skills with Experts',
+    description: 'Career development platform that connects newcomers with experienced professionals. Get practical experience working on real projects.',
     type: 'website',
-    locale: 'hy_AM',
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SkillBridge - Զարգացրեք հմտությունները փորձագետների հետ',
-    description: 'Կարիերայի զարգացման հարթակ, որը միավորում է նորեկներին փորձառու մասնագետների հետ: Ստացեք գործնական փորձ՝ աշխատելով իրական ծրագրերի վրա:',
+    title: 'SkillBridge - Develop Skills with Experts',
+    description: 'Career development platform that connects newcomers with experienced professionals. Get practical experience working on real projects.',
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5174'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   alternates: {
     canonical: '/',
   },
@@ -49,19 +50,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="hy" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth">
       <body className={inter.className}>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="icon" href="/favicon.ico" />
         <ScrollProgress />
-        <div className="flex min-h-screen flex-col">
-          <ClientNavbar />
-          <ToastHost />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </div>
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col">
+            <ClientNavbar />
+            <ToastHost />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </AuthProvider>
       </body>
     </html>
   )
