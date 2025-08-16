@@ -10,9 +10,10 @@ export async function POST(req: Request) {
   if (!stripeSecret || !webhookSecret) {
     return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 })
   }
-  const stripe = new Stripe(stripeSecret, { apiVersion: '2023-10-16' })
+  const stripe = new Stripe(stripeSecret, { apiVersion: '2025-07-30.basil' })
 
-  const sig = headers().get('stripe-signature') || ''
+  const headersStore = await headers()
+  const sig = headersStore.get('stripe-signature') || ''
   const rawBody = await req.text()
 
   let event: Stripe.Event

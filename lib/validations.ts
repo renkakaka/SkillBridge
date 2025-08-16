@@ -37,6 +37,7 @@ export const projectSchema = z.object({
 
 // Application schema
 export const applicationSchema = z.object({
+  projectId: z.string().min(1, 'Project ID is required'),
   coverLetter: z.string().min(100, 'Cover letter must be at least 100 characters'),
   proposedTimeline: z.string().min(1, 'Proposed timeline is required'),
   portfolioLinks: z.array(z.string().url('Invalid URL')).optional(),

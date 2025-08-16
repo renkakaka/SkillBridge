@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { getSessionFromRequest } from '@/lib/auth'
 
+export const dynamic = 'force-static'
+
 function assertAdmin(req: NextRequest) {
   const session = getSessionFromRequest(req)
   if (!session || session.userType !== 'admin') {

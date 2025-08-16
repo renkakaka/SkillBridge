@@ -5,7 +5,7 @@ import { getSessionFromRequest } from '@/lib/auth'
 // During static build, avoid initializing Stripe if key is missing to prevent build-time errors
 const stripeKey = process.env.STRIPE_SECRET_KEY
 const stripe = stripeKey
-  ? new Stripe(stripeKey, { apiVersion: '2023-10-16' })
+  ? new Stripe(stripeKey, { apiVersion: '2025-07-30.basil' })
   : null as unknown as Stripe
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       amount: Math.round(amount * 100), // Stripe использует центы
       currency,
       description,
-      customer_email: customerEmail,
+      // customer_email: customerEmail as string, // Removed as it's not supported in newer Stripe versions
       metadata: { userId: session.userId },
       automatic_payment_methods: {
         enabled: true,

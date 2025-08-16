@@ -29,7 +29,7 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Սխալ տվյալներ', details: error.errors },
+        { error: 'Սխալ տվյալներ', details: error.issues },
         { status: 400 }
       )
     }

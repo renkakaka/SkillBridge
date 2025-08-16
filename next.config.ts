@@ -10,14 +10,18 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
-  // Netlify specific settings
+  // Netlify specific settings - use standalone instead of export for API routes
   output: 'standalone',
   // Image optimization
   images: {
     unoptimized: true,
   },
   // Trailing slash for better compatibility
-  trailingSlash: false,
+  trailingSlash: true,
+  // Disable server components for static export
+  experimental: {
+    // appDir: true, // Removed for Next.js 15 compatibility
+  },
 };
 
 export default nextConfig;

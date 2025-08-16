@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/rateLimit'
 import { signupSchema } from '@/lib/validations'
 import { sendVerificationEmail, sendWelcomeEmail } from '@/lib/email'
 
+export const dynamic = 'force-static'
+
 export async function POST(req: NextRequest) {
   try {
     const rl = await rateLimit(req.headers, { id: 'auth:signup', limit: 5, windowMs: 300_000 })
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ 
         error: 'Invalid data', 
-        details: parsed.error.errors 
+        details: parsed.error.issues 
       }, { status: 400 })
     }
 

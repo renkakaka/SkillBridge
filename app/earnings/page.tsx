@@ -196,7 +196,7 @@ export default function EarningsPage() {
       const ctx = earningsChartRef.current.getContext('2d')
       if (ctx) {
         const earningsData = getEarningsData()
-        chartInstances.current.earnings = new Chart(ctx, {
+        chartInstances.current.earnings = new (Chart as any)(ctx, {
           type: 'line',
           data: {
             labels: earningsData.labels,
@@ -231,7 +231,7 @@ export default function EarningsPage() {
                 cornerRadius: 8,
                 displayColors: false,
                 callbacks: {
-                  label: function(context) {
+                  label: function(context: any) {
                     return `Եկամուտ: $${context.parsed.y.toLocaleString()}`
                   }
                 }
@@ -245,7 +245,7 @@ export default function EarningsPage() {
                   drawBorder: false
                 },
                 ticks: {
-                  callback: function(value) {
+                  callback: function(value: any) {
                     return '$' + value.toLocaleString()
                   }
                 }
@@ -270,7 +270,7 @@ export default function EarningsPage() {
       const ctx = categoryChartRef.current.getContext('2d')
       if (ctx) {
         const categoryData = getCategoryData()
-        chartInstances.current.category = new Chart(ctx, {
+        chartInstances.current.category = new (Chart as any)(ctx, {
           type: 'doughnut',
           data: {
             labels: categoryData.labels,
@@ -310,7 +310,7 @@ export default function EarningsPage() {
                 borderWidth: 1,
                 cornerRadius: 8,
                 callbacks: {
-                  label: function(context) {
+                  label: function(context: any) {
                     const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
                     const percentage = ((context.parsed / total) * 100).toFixed(1)
                     return `${context.label}: $${context.parsed.toLocaleString()} (${percentage}%)`
@@ -328,7 +328,7 @@ export default function EarningsPage() {
       const ctx = monthlyChartRef.current.getContext('2d')
       if (ctx) {
         const monthlyData = getMonthlyData()
-        chartInstances.current.monthly = new Chart(ctx, {
+        chartInstances.current.monthly = new (Chart as any)(ctx, {
           type: 'bar',
           data: {
             labels: monthlyData.labels,
@@ -358,7 +358,7 @@ export default function EarningsPage() {
                 cornerRadius: 8,
                 displayColors: false,
                 callbacks: {
-                  label: function(context) {
+                  label: function(context: any) {
                     return `Եկամուտ: $${context.parsed.y.toLocaleString()}`
                   }
                 }
@@ -372,7 +372,7 @@ export default function EarningsPage() {
                   drawBorder: false
                 },
                 ticks: {
-                  callback: function(value) {
+                  callback: function(value: any) {
                     return '$' + value.toLocaleString()
                   }
                 }

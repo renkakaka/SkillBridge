@@ -264,7 +264,7 @@ export default function ProjectsPage() {
                       {/* Skills */}
                       <div className="mb-4">
                         <div className="flex flex-wrap gap-1">
-                          {project.skills.slice(0, 4).map((skill) => (
+                          {project.skills.slice(0, 4).map((skill: any) => (
                             <Badge key={skill} variant="secondary" size="sm">
                               {skill}
                             </Badge>

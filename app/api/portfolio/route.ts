@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
         ...(category !== 'all' ? { category } : {}),
         ...(search ? {
           OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-            { tags: { contains: search, mode: 'insensitive' } },
+            { title: { contains: search } },
+            { description: { contains: search } },
+            { tags: { contains: search } },
           ]
         } : {})
       },

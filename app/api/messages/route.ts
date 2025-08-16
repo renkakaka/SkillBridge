@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         message, 
         conversationId: actualConversationId,
-        message: 'Message sent successfully' 
+        success: 'Message sent successfully' 
       })
     }
 
