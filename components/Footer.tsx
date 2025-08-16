@@ -26,16 +26,16 @@ export default function Footer() {
               {t('footer.description')}
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-200">
+              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-lg">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-200">
+              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-lg">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-200">
+              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-lg">
                 <Github className="h-5 w-5" />
               </a>
-              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-200">
+              <a href="#" className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-primary-600 transition-all duration-300 hover:scale-110 hover:rotate-3 hover:shadow-lg">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
@@ -46,22 +46,22 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-white mb-4">{t('footer.links.resources')}</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/projects" className="text-neutral-300 hover:text-white transition-colors duration-200">
+                <Link href="/projects" className="text-neutral-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-block">
                   {t('navigation.projects')}
                 </Link>
               </li>
               <li>
-                <Link href="/mentors" className="text-neutral-300 hover:text-white transition-colors duration-200">
+                <Link href="/mentors" className="text-neutral-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-block">
                   {t('navigation.mentors')}
                 </Link>
               </li>
               <li>
-                <Link href="/success-stories" className="text-neutral-300 hover:text-white transition-colors duration-200">
+                <Link href="/success-stories" className="text-neutral-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-block">
                   {t('navigation.successStories')}
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-neutral-300 hover:text-white transition-colors duration-200">
+                <Link href="/pricing" className="text-neutral-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-block">
                   {t('navigation.pricing')}
                 </Link>
               </li>

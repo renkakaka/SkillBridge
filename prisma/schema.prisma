@@ -1,11 +1,11 @@
-// Prisma schema for SkillBridge MVP (SQLite for local development)
+// Prisma schema for SkillBridge MVP (PostgreSQL for production)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

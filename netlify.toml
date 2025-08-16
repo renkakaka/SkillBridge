@@ -1,10 +1,11 @@
 [build]
-  command = "npm run build"
+  command = "npm run build:netlify"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
-  PRISMA_GENERATE_DATAPROXY = "true"
+  PRISMA_GENERATE_DATAPROXY = "false"
+  PRISMA_CLIENT_ENGINE_TYPE = "binary"
 
 [[redirects]]
   from = "/*"
@@ -18,3 +19,7 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Prisma specific configuration
+[build.environment]
+  PRISMA_CLI_BINARY_TARGETS = "native,linux-musl"

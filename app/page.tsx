@@ -114,7 +114,7 @@ export default function HomePage() {
               <Link href="/auth/signup">
                 <Button 
                   size="xl" 
-                  className="btn-primary group"
+                  className="btn-primary group transform hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
                   leftIcon={<Rocket className="h-5 w-5" />}
                   rightIcon={<ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />}
                 >
@@ -126,7 +126,7 @@ export default function HomePage() {
                 <Button 
                   variant="outline" 
                   size="xl" 
-                  className="btn-secondary group"
+                  className="btn-secondary group transform hover:scale-105 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
                   leftIcon={<Play className="h-5 w-5" />}
                 >
                   Դիտել Ծրագրերը
@@ -137,7 +137,7 @@ export default function HomePage() {
             {/* Enhanced Stats - Заменяем на более интересный контент */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16">
               {/* Биржа заданий */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300 group">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 sm:p-8 border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden">
                 <div className="flex items-center justify-between mb-6">
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
                     <Target className="h-8 w-8 text-white" />
@@ -146,34 +146,36 @@ export default function HomePage() {
                     Նոր
                   </Badge>
                 </div>
-                <h3 className="text-2xl font-bold text-neutral-900 mb-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-3">
                   Բիժա Զադաչ
                 </h3>
-                <p className="text-neutral-600 mb-4 leading-relaxed">
+                <p className="text-neutral-600 mb-4 leading-relaxed text-sm sm:text-base">
                   Ստացեք վճարովի առաջադրանքներ և կառուցեք ձեր պորտֆոլիոն: Աշխատեք իրական նախագծերի վրա և վաստակեք փող:
                 </p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex items-center space-x-4 text-sm text-neutral-600">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-600">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
+                      <Users className="h-4 w-4 mr-1 flex-shrink-0" />
                       <span>50+ հաճախորդ</span>
                     </div>
                     <div className="flex items-center">
-                      <Award className="h-4 w-4 mr-1" />
+                      <Award className="h-4 w-4 mr-1 flex-shrink-0" />
                       <span>100+ ավարտված</span>
                     </div>
                   </div>
-                  <Link href="/marketplace">
-                    <Button variant="outline" size="sm" className="group whitespace-nowrap">
-                      Դիտել առաջադրանքներ
-                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
+                  <div className="w-full">
+                    <Link href="/marketplace" className="block w-full">
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto group transition-all duration-200 hover:scale-105">
+                        <span className="truncate">Դիտել առաջադրանքներ</span>
+                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
 
               {/* Система достижений */}
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl p-8 border border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 group">
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl p-6 sm:p-8 border border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden">
                 <div className="flex items-center justify-between mb-6">
                   <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
                     <Trophy className="h-8 w-8 text-white" />
@@ -182,29 +184,31 @@ export default function HomePage() {
                     Հանրաճանաչ
                   </Badge>
                 </div>
-                <h3 className="text-2xl font-bold text-neutral-900 mb-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-3">
                   Հաջողությունների Համակարգ
                 </h3>
-                <p className="text-neutral-600 mb-4 leading-relaxed">
+                <p className="text-neutral-600 mb-4 leading-relaxed text-sm sm:text-base">
                   Վաստակեք բեջեր, բարձրացրեք ձեր մակարդակը և բացեք նոր հնարավորություններ: Հետևեք ձեր առաջընթացին:
                 </p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex items-center space-x-4 text-sm text-neutral-600">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-600">
                     <div className="flex items-center">
-                      <Star className="h-4 w-4 mr-1" />
+                      <Star className="h-4 w-4 mr-1 flex-shrink-0" />
                       <span>25+ բեջեր</span>
                     </div>
                     <div className="flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-1" />
+                      <TrendingUp className="h-4 w-4 mr-1 flex-shrink-0" />
                       <span>5 մակարդակ</span>
                     </div>
                   </div>
-                  <Link href="/achievements">
-                    <Button variant="outline" size="sm" className="group whitespace-nowrap">
-                      Դիտել բեջեր
-                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
+                  <div className="w-full">
+                    <Link href="/achievements" className="block w-full">
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto group transition-all duration-200 hover:scale-105">
+                        <span className="truncate">Դիտել բեջեր</span>
+                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
