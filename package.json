@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:netlify": "set PRISMA_CLIENT_ENGINE_TYPE=binary && set PRISMA_CLI_BINARY_TARGETS=native,linux-musl && prisma generate && next build",
     "build:netlify": "prisma generate && next build",
     "start": "next start",
     "start:prod": "PORT=${PORT:-3001} next start -p ${PORT:-3001}",
