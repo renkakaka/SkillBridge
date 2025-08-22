@@ -1,18 +1,18 @@
 [build]
   command = "npm run build:netlify"
-  publish = ".next/standalone"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
   PRISMA_GENERATE_DATAPROXY = "false"
   PRISMA_CLIENT_ENGINE_TYPE = "binary"
-  PRISMA_CLI_BINARY_TARGETS = "native,linux-musl"
+  PRISMA_CLI_BINARY_TARGETS = "native,linux-musl,debian-openssl-3.0.x,rhel-openssl-1.0.x"
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
-# Next.js specific redirects for SPA routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# The @netlify/plugin-nextjs plugin will handle all routing automatically
 
 # Security headers
 [[headers]]

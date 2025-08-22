@@ -10,8 +10,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
-  // Netlify specific settings - use standalone instead of export for API routes
-  output: 'standalone',
   // Image optimization
   images: {
     unoptimized: true,
