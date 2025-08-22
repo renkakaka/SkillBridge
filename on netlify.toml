@@ -1,0 +1,5 @@
+[33m56a268c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add: Deployment summary with all fixes for Netlify
+[33me683e4e[m Fix: Install dependencies and generate Prisma client with correct binary targets
+[33m59e2e53[m Fix: Update @netlify/plugin-nextjs to version 5.0.0
+[33mae0f699[m chore(netlify): align PRISMA_CLI_BINARY_TARGETS with Netlify (debian-openssl-3.0.x, rhel-openssl-1.0.x)
+[33m8e88449[m chore(prisma): add debian-openssl-3.0.x and rhel-openssl-1.0.x to binaryTargets for Netlify

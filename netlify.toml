@@ -1,12 +1,12 @@
 [build]
-  command = "npm run build:netlify"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
   PRISMA_GENERATE_DATAPROXY = "false"
   PRISMA_CLIENT_ENGINE_TYPE = "binary"
-  PRISMA_CLI_BINARY_TARGETS = "native,linux-musl,debian-openssl-3.0.x,rhel-openssl-1.0.x"
+  PRISMA_CLI_BINARY_TARGETS = "linux-musl"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
 [[plugins]]

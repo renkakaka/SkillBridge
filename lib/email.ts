@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 import { emailConfig } from './emailConfig'
 import { emailTemplates } from './emailTemplates'
 
@@ -39,6 +40,13 @@ const createTransporter = () => {
   return nodemailer.createTransport(config)
 }
 
+const maybeResend = () => {
+  if (emailConfig.provider === 'resend' && process.env.RESEND_API_KEY) {
+    return new Resend(process.env.RESEND_API_KEY)
+  }
+  return null
+}
+
 export async function sendVerificationEmail(email: string, token: string, name: string) {
   try {
     console.log(`🚀 Sending beautiful verification email to: ${email}`)
@@ -52,6 +60,23 @@ export async function sendVerificationEmail(email: string, token: string, name: 
     const verificationUrl = `${emailConfig.app.url}/auth/verify-email?token=${token}`
     console.log(`✨ Verification URL: ${verificationUrl}`)
     
+    const resend = maybeResend()
+    if (resend) {
+      const result = await resend.emails.send({
+        from: `${emailConfig.from.name} <${emailConfig.from.email}>`,
+        to: email,
+        subject: `Հաստատեք ձեր ${emailConfig.app.nameHy || emailConfig.app.name} հաշիվը ✨` ,
+        html: emailTemplates.verificationEmail(
+          name,
+          verificationUrl,
+          emailConfig.app.nameHy || emailConfig.app.name
+        ),
+      })
+      // @ts-expect-error Resend SDK types
+      if (result.error) throw new Error(result.error?.message || 'Resend send error')
+      return result
+    }
+
     const transporter = createTransporter()
     
     // Проверяем соединение (быстро)
@@ -121,6 +146,23 @@ export async function sendPasswordResetEmail(email: string, token: string, name:
     const resetUrl = `${emailConfig.app.url}/auth/reset-password/confirm?token=${token}`
     console.log(`🔑 Reset URL: ${resetUrl}`)
     
+    const resend = maybeResend()
+    if (resend) {
+      const result = await resend.emails.send({
+        from: `${emailConfig.from.name} <${emailConfig.from.email}>`,
+        to: email,
+        subject: `Վերակայեք ձեր ${emailConfig.app.nameHy || emailConfig.app.name} գաղտնաբառը 🔐`,
+        html: emailTemplates.passwordResetEmail(
+          name,
+          resetUrl,
+          emailConfig.app.nameHy || emailConfig.app.name
+        ),
+      })
+      // @ts-expect-error Resend SDK types
+      if (result.error) throw new Error(result.error?.message || 'Resend send error')
+      return result
+    }
+
     const transporter = createTransporter()
     
     // Проверяем соединение (быстро)
@@ -165,6 +207,22 @@ export async function sendWelcomeEmail(email: string, name: string) {
   try {
     console.log(`🎉 Sending beautiful welcome email to: ${email}`)
     
+    const resend = maybeResend()
+    if (resend) {
+      const result = await resend.emails.send({
+        from: `${emailConfig.from.name} <${emailConfig.from.email}>`,
+        to: email,
+        subject: `Բարի գալուստ ${emailConfig.app.nameHy || emailConfig.app.name}! 🎉`,
+        html: emailTemplates.welcomeEmail(
+          name,
+          emailConfig.app.nameHy || emailConfig.app.name
+        ),
+      })
+      // @ts-expect-error Resend SDK types
+      if (result.error) throw new Error(result.error?.message || 'Resend send error')
+      return result
+    }
+
     const transporter = createTransporter()
     
     // Используем красивый HTML шаблон для приветствия на армянском языке

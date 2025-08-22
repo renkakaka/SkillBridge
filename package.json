@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --schema=./prisma/schema.prisma && next build",
     "build:netlify": "prisma generate --schema=./prisma/schema.prisma && next build",
     "start": "next start",
     "start:prod": "PORT=${PORT:-3001} next start -p ${PORT:-3001}",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "echo 'Postinstall completed'",
     "prisma:push": "prisma db push",
     "prisma:generate": "prisma generate",
     "prisma:seed": "npx ts-node prisma/seed.ts",
@@ -40,7 +40,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
-    "resend": "^6.0.1",
+    "resend": "^4.0.0",
     "stripe": "^18.4.0",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.0.17"

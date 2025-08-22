@@ -2,39 +2,32 @@
 // Измените эти настройки для смены провайдера email
 
 export const emailConfig = {
-  // Gmail SMTP настройки
+  // Провайдер по умолчанию: если есть RESEND_API_KEY, используем Resend. Иначе SMTP.
+  provider: process.env.RESEND_API_KEY ? 'resend' : 'smtp',
+  // SMTP настройки (используются, если RESEND_API_KEY не задан)
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true для 465, false для других портов
-    user: process.env.SMTP_USER || 'qaramyanv210@gmail.com',
-    pass: process.env.SMTP_PASS || 'zxok ytfx qudh pivv',
-    // Дополнительные настройки для Gmail
-    auth: {
-      type: 'OAuth2',
-      user: process.env.SMTP_USER || 'qaramyanv210@gmail.com',
-      clientId: process.env.GMAIL_CLIENT_ID,
-      clientSecret: process.env.GMAIL_CLIENT_SECRET,
-      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-    },
-    // Настройки TLS для быстрой доставки
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    // Настройки TLS
     tls: {
       rejectUnauthorized: false
     },
-    // Настройки соединения для быстрой доставки
-    connectionTimeout: 30000, // 30 секунд
-    greetingTimeout: 15000,   // 15 секунд
-    socketTimeout: 30000,     // 30 секунд
-    // Дополнительные настройки для быстрой доставки
-    pool: true,               // Использовать пул соединений
-    maxConnections: 5,        // Максимум соединений
-    maxMessages: 100,         // Максимум сообщений на соединение
-    rateLimit: 14,            // Лимит сообщений в секунду
+    // Настройки соединения
+    connectionTimeout: 30000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateLimit: 14,
   },
   
   // Настройки отправителя
   from: {
-    email: process.env.MAIL_FROM_EMAIL || 'qaramyanv210@gmail.com',
+    email: process.env.MAIL_FROM_EMAIL || 'no-reply@skillbridge.dev',
     name: process.env.MAIL_FROM_NAME || 'SkillBridge',
   },
   
@@ -56,27 +49,30 @@ export const emailConfig = {
 
 // Инструкции по смене провайдера:
 /*
-1. Gmail SMTP (текущий):
-   - SMTP_HOST=smtp.gmail.com
-   - SMTP_PORT=587
-   - SMTP_USER=your-email@gmail.com
-   - SMTP_PASS=your-app-password
+1. Resend (рекомендуется, бесплатно на старте):
+   - RESEND_API_KEY=your-api-key
+   - MAIL_FROM_EMAIL=your-verified-domain-email@example.com
+   - MAIL_FROM_NAME=SkillBridge
 
-2. Outlook/Hotmail:
+2. SMTP (любой провайдер):
+   - SMTP_HOST=smtp.example.com
+   - SMTP_PORT=587
+   - SMTP_USER=username
+   - SMTP_PASS=password
+   - MAIL_FROM_EMAIL=from@example.com
+   - MAIL_FROM_NAME=SkillBridge
+
+3. Outlook/Hotmail:
    - SMTP_HOST=smtp-mail.outlook.com
    - SMTP_PORT=587
    - SMTP_USER=your-email@outlook.com
    - SMTP_PASS=your-password
 
-3. Yahoo Mail:
+4. Yahoo Mail:
    - SMTP_HOST=smtp.mail.yahoo.com
    - SMTP_PORT=587
    - SMTP_USER=your-email@yahoo.com
    - SMTP_PASS=your-app-password
-
-4. Resend (если вернетесь к нему):
-   - RESEND_API_KEY=your-api-key
-   - Удалите SMTP_* переменные
 
 5. Собственный SMTP сервер:
    - SMTP_HOST=your-smtp-server.com
