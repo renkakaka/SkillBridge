@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "build:netlify": "PRISMA_CLIENT_ENGINE_TYPE=binary PRISMA_CLI_BINARY_TARGETS=native,debian-openssl-3.0.x,rhel-openssl-1.0.x prisma generate && next build",
-    "build:netlify": "prisma generate && next build",
+    "build:netlify": "prisma generate --schema=./prisma/schema.prisma && next build",
     "start": "next start",
     "start:prod": "PORT=${PORT:-3001} next start -p ${PORT:-3001}",
     "lint": "next lint",
@@ -48,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@netlify/plugin-nextjs": "^5.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
