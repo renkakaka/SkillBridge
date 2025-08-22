@@ -57,7 +57,7 @@ export async function sendVerificationEmail(email: string, token: string, name: 
       fromName: emailConfig.from.name
     })
     
-    const verificationUrl = `${emailConfig.app.url}/auth/verify-email?token=${token}`
+    const verificationUrl = `${emailConfig.app.url}/auth/verify-email?token=${token}&email=${encodeURIComponent(email)}`
     console.log(`✨ Verification URL: ${verificationUrl}`)
     
     const resend = maybeResend()
